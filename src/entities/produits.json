@@ -1,0 +1,75 @@
+
+{
+  "name": "produits",
+  "options": {
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["nom", "prix", "categorie", "enStock", "dateCreation"],
+        "properties": {
+          "nom": {
+            "bsonType": "string",
+            "description": "Nom du produit"
+          },
+          "description": {
+            "bsonType": "string",
+            "description": "Description détaillée du produit"
+          },
+          "prix": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Prix du produit en euros"
+          },
+          "categorie": {
+            "bsonType": "string",
+            "enum": ["bijoux", "accessoires", "decoration", "art-numerique", "personnalise"],
+            "description": "Catégorie du produit"
+          },
+          "enStock": {
+            "bsonType": "bool",
+            "description": "Disponibilité du produit"
+          },
+          "quantite": {
+            "bsonType": "int",
+            "minimum": 0,
+            "description": "Quantité en stock"
+          },
+          "images": {
+            "bsonType": "array",
+            "description": "URLs des images du produit"
+          },
+          "tags": {
+            "bsonType": "array",
+            "description": "Tags pour la recherche"
+          },
+          "poids": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Poids en grammes"
+          },
+          "dimensions": {
+            "bsonType": "object",
+            "description": "Dimensions du produit"
+          },
+          "createur": {
+            "bsonType": "string",
+            "description": "Créateur du produit"
+          },
+          "dateCreation": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Date de création ISO 8601"
+          },
+          "dateMiseAJour": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Date de mise à jour ISO 8601"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "validationLevel": "moderate",
+    "validationAction": "warn"
+  }
+}

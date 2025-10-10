@@ -1,0 +1,67 @@
+
+{
+  "name": "commandes",
+  "options": {
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["numeroCommande", "statut", "articles", "montantTotal", "dateCommande"],
+        "properties": {
+          "numeroCommande": {
+            "bsonType": "string",
+            "description": "Numéro unique de commande"
+          },
+          "statut": {
+            "bsonType": "string",
+            "enum": ["en-attente", "confirmee", "en-preparation", "expediee", "livree", "annulee"],
+            "description": "Statut de la commande"
+          },
+          "articles": {
+            "bsonType": "array",
+            "description": "Liste des articles commandés"
+          },
+          "montantTotal": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Montant total de la commande"
+          },
+          "fraisLivraison": {
+            "bsonType": "number",
+            "minimum": 0,
+            "description": "Frais de livraison"
+          },
+          "adresseLivraison": {
+            "bsonType": "object",
+            "description": "Adresse de livraison"
+          },
+          "methodePaiement": {
+            "bsonType": "string",
+            "description": "Méthode de paiement utilisée"
+          },
+          "notes": {
+            "bsonType": "string",
+            "description": "Notes spéciales pour la commande"
+          },
+          "dateCommande": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Date de la commande ISO 8601"
+          },
+          "dateExpedition": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Date d'expédition ISO 8601"
+          },
+          "dateLivraison": {
+            "bsonType": "string",
+            "title": "datetime",
+            "description": "Date de livraison ISO 8601"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "validationLevel": "moderate",
+    "validationAction": "warn"
+  }
+}
