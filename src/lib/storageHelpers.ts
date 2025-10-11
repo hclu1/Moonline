@@ -7,7 +7,7 @@ export const getProductImageUrl = (imagePath: string | null): string => {
   if (!imagePath) return '/placeholder-product.jpg'
   
   const { data } = supabase.storage
-    .from('produits-images')
+    .from('PRODUCTS-IMAGES')
     .getPublicUrl(imagePath)
   
   return data.publicUrl
@@ -25,7 +25,7 @@ export const uploadProductImage = async (
     const fileName = `${category}/${Date.now()}.${fileExt}`
 
     const { error } = await supabase.storage
-      .from('produits-images')
+      .from('PRODUCTS-IMAGES')
       .upload(fileName, file, {
         cacheControl: '3600',
         upsert: false
@@ -53,13 +53,16 @@ export const uploadCommandeImage = async (
     const fileName = `${userId}/${commandeId}_${Date.now()}.${fileExt}`
 
     const { error } = await supabase.storage
-      .from('commandes-personnalisees')
+      .from('COMMANDES-PERSONNALISEES')
       .upload(fileName, file, {
         cacheControl: '3600',
         upsert: false
       })
 
-    if (error) throw error
+    if (error) {
+      console.error('Erreur upload image commande:', error)
+      throw error
+    }
 
     return fileName
   } catch (error) {
@@ -76,7 +79,7 @@ export const getCommandeImageUrl = async (
 ): Promise<string | null> => {
   try {
     const { data, error } = await supabase.storage
-      .from('commandes-personnalisees')
+      .from('COMMANDES-PERSONNALISEES')
       .createSignedUrl(imagePath, 3600) // URL valide 1h
 
     if (error) throw error
@@ -101,11 +104,11 @@ export const uploadAvatar = async (
 
     // Supprimer l'ancien avatar s'il existe
     await supabase.storage
-      .from('avatars')
+      .from('AVATARS')
       .remove([fileName])
 
     const { error } = await supabase.storage
-      .from('avatars')
+      .from('AVATARS')
       .upload(fileName, file, {
         cacheControl: '3600',
         upsert: true
@@ -125,7 +128,7 @@ export const uploadAvatar = async (
  */
 export const getAvatarUrl = (userId: string, ext: string = 'jpg'): string => {
   const { data } = supabase.storage
-    .from('avatars')
+    .from('AVATARS')
     .getPublicUrl(`${userId}/avatar.${ext}`)
   
   return data.publicUrl
