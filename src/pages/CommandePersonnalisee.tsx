@@ -1,7 +1,8 @@
-
 import React, { useState } from 'react'
 import {Upload, Palette, Sparkles, Send} from 'lucide-react'
 import toast from 'react-hot-toast'
+import { supabase } from '../lib/supabaseClient'
+import { uploadCommandeImage, validateImageFile } from '../lib/storageHelpers'
 
 /**
  * Page de commande personnalisée
@@ -20,6 +21,7 @@ const CommandePersonnalisee: React.FC = () => {
   })
 
   const [fichierSelectionne, setFichierSelectionne] = useState<File | null>(null)
+  const [imagePath, setImagePath] = useState<string | null>(null)
   const [envoiEnCours, setEnvoiEnCours] = useState(false)
 
   const typesCommande = [
@@ -41,30 +43,50 @@ const CommandePersonnalisee: React.FC = () => {
   }
 
   /**
-   * Gère la sélection de fichier
+   * Gère la sélection et l'upload de fichier
    */
-  const gererFichier = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const gererFichier = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fichier = e.target.files?.[0]
-    if (fichier) {
-      // Vérifier la taille (max 5MB)
-      if (fichier.size > 5 * 1024 * 1024) {
-        toast.error('Le fichier est trop volumineux (max 5MB)')
+    if (!fichier) return
+
+    // Validation avec le helper
+    const erreur = validateImageFile(fichier, 5)
+    if (erreur) {
+      toast.error(erreur)
+      return
+    }
+
+    try {
+      // Générer un ID unique pour cette commande
+      const commandeId = crypto.randomUUID()
+      
+      // Pour le moment, on utilise 'guest' comme userId
+      // Plus tard, remplacer par : const { data: { user } } = await supabase.auth.getUser()
+      const userId = 'guest'
+      
+      // Upload vers Supabase Storage
+      toast.loading('Upload de l\'image...')
+      const uploadedPath = await uploadCommandeImage(fichier, userId, commandeId)
+      toast.dismiss()
+      
+      if (!uploadedPath) {
+        toast.error('Erreur lors du téléchargement de l\'image')
         return
       }
-      
-      // Vérifier le type
-      if (!fichier.type.startsWith('image/')) {
-        toast.error('Veuillez sélectionner une image')
-        return
-      }
-      
+
       setFichierSelectionne(fichier)
-      toast.success('Image sélectionnée avec succès')
+      setImagePath(uploadedPath)
+      toast.success('Image téléchargée avec succès')
+      
+    } catch (error) {
+      toast.dismiss()
+      toast.error('Erreur lors du téléchargement')
+      console.error('Erreur upload:', error)
     }
   }
 
   /**
-   * Soumet le formulaire de commande
+   * Soumet le formulaire de commande vers Supabase
    */
   const soumettreCommande = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,9 +100,30 @@ const CommandePersonnalisee: React.FC = () => {
     setEnvoiEnCours(true)
 
     try {
-      // Simulation d'envoi (remplacer par vraie API)
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
+      // Insertion dans la table commandes_personnalisees
+      const { data, error } = await supabase
+        .from('commandes_personnalisees')
+        .insert([
+          {
+            nom: formulaire.nom,
+            email: formulaire.email,
+            telephone: formulaire.telephone || null,
+            type_commande: formulaire.typeCommande,
+            dimensions: formulaire.dimensions || null,
+            couleurs: formulaire.couleurs || null,
+            description: formulaire.description,
+            budget: formulaire.budget || null,
+            delai: formulaire.delai || null,
+            fichier_reference: imagePath || null,
+            statut: 'nouvelle'
+          }
+        ])
+        .select()
+
+      if (error) {
+        throw error
+      }
+
       toast.success('Votre demande de commande personnalisée a été envoyée ! Nous vous recontacterons sous 24h.')
       
       // Réinitialiser le formulaire
@@ -96,8 +139,14 @@ const CommandePersonnalisee: React.FC = () => {
         delai: ''
       })
       setFichierSelectionne(null)
+      setImagePath(null)
+      
+      // Réinitialiser l'input file
+      const fileInput = document.getElementById('upload-reference') as HTMLInputElement
+      if (fileInput) fileInput.value = ''
       
     } catch (error) {
+      console.error('Erreur lors de l\'envoi:', error)
       toast.error('Erreur lors de l\'envoi. Veuillez réessayer.')
     } finally {
       setEnvoiEnCours(false)
