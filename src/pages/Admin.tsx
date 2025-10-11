@@ -61,7 +61,6 @@ const Admin: React.FC = () => {
     }
   }
 
-  // Données d'exemple avec images
   const [produits] = useState<Produit[]>([
     {
       id: '1',
@@ -196,7 +195,6 @@ const Admin: React.FC = () => {
           })}
         </div>
 
-        {/* DASHBOARD */}
         {ongletActif === 'dashboard' && (
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -268,7 +266,6 @@ const Admin: React.FC = () => {
           </div>
         )}
 
-        {/* PRODUITS */}
         {ongletActif === 'produits' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -343,7 +340,6 @@ const Admin: React.FC = () => {
           </div>
         )}
 
-        {/* COMMANDES */}
         {ongletActif === 'commandes' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Gestion des commandes</h2>
@@ -397,7 +393,6 @@ const Admin: React.FC = () => {
           </div>
         )}
 
-        {/* CLIENTS */}
         {ongletActif === 'clients' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Gestion des clients</h2>
@@ -409,7 +404,6 @@ const Admin: React.FC = () => {
           </div>
         )}
 
-        {/* CONFIGURATION */}
         {ongletActif === 'configuration' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -424,7 +418,6 @@ const Admin: React.FC = () => {
               </button>
             </div>
 
-            {/* Config Tabs */}
             <div className="flex space-x-1 bg-slate-800/30 backdrop-blur-sm rounded-lg p-1 border border-purple-500/20 overflow-x-auto">
               {configTabs.map((tab) => {
                 const Icon = tab.icon
@@ -445,9 +438,85 @@ const Admin: React.FC = () => {
               })}
             </div>
 
-            {/* Theme Tab */}
             {activeConfigTab === 'theme' && (
               <div className="space-y-6">
+                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                  <h3 className="text-xl font-semibold text-white mb-4">Couleurs du thème</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <ColorInput label="Couleur principale" value={localConfig.primary_color || '#3b82f6'} onChange={(v) => handleConfigChange('primary_color', v)} />
+                    <ColorInput label="Couleur secondaire" value={localConfig.secondary_color || '#8b5cf6'} onChange={(v) => handleConfigChange('secondary_color', v)} />
+                    <ColorInput label="Couleur accent" value={localConfig.accent_color || '#f59e0b'} onChange={(v) => handleConfigChange('accent_color', v)} />
+                    <ColorInput label="Fond de page" value={localConfig.background_color || '#ffffff'} onChange={(v) => handleConfigChange('background_color', v)} />
+                    <ColorInput label="Couleur du texte" value={localConfig.text_color || '#1f2937'} onChange={(v) => handleConfigChange('text_color', v)} />
+                    <ColorInput label="Fond du header" value={localConfig.header_bg_color || '#1e40af'} onChange={(v) => handleConfigChange('header_bg_color', v)} />
+                    <ColorInput label="Fond du footer" value={localConfig.footer_bg_color || '#1f2937'} onChange={(v) => handleConfigChange('footer_bg_color', v)} />
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                  <h3 className="text-lg font-semibold text-white mb-4">Aperçu</h3>
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg" style={{ backgroundColor: localConfig.header_bg_color }}>
+                      <p className="text-white font-bold">Header (exemple)</p>
+                    </div>
+                    <div className="flex gap-4 flex-wrap">
+                      <button className="px-4 py-2 rounded text-white" style={{ backgroundColor: localConfig.primary_color }}>Bouton principal</button>
+                      <button className="px-4 py-2 rounded text-white" style={{ backgroundColor: localConfig.secondary_color }}>Bouton secondaire</button>
+                      <button className="px-4 py-2 rounded text-white" style={{ backgroundColor: localConfig.accent_color }}>Bouton accent</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeConfigTab === 'content' && (
+              <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                <h3 className="text-xl font-semibold text-white mb-4">Textes du site</h3>
+                <div className="space-y-4">
+                  <TextInput label="Nom du site" value={localConfig.site_name || ''} onChange={(v) => handleConfigChange('site_name', v)} />
+                  <TextInput label="Slogan" value={localConfig.site_slogan || ''} onChange={(v) => handleConfigChange('site_slogan', v)} />
+                  <TextInput label="Titre hero page d'accueil" value={localConfig.home_hero_title || ''} onChange={(v) => handleConfigChange('home_hero_title', v)} />
+                  <TextInput label="Sous-titre hero" value={localConfig.home_hero_subtitle || ''} onChange={(v) => handleConfigChange('home_hero_subtitle', v)} />
+                  <TextInput label="Titre page À propos" value={localConfig.about_title || ''} onChange={(v) => handleConfigChange('about_title', v)} />
+                  <TextareaInput label="Description À propos" value={localConfig.about_description || ''} onChange={(v) => handleConfigChange('about_description', v)} rows={6} />
+                </div>
+              </div>
+            )}
+
+            {activeConfigTab === 'contact' && (
+              <div className="space-y-6">
+                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                  <h3 className="text-xl font-semibold text-white mb-4">Coordonnées</h3>
+                  <div className="space-y-4">
+                    <TextInput label="Email de contact" type="email" value={localConfig.contact_email || ''} onChange={(v) => handleConfigChange('contact_email', v)} />
+                    <TextInput label="Téléphone" type="tel" value={localConfig.contact_phone || ''} onChange={(v) => handleConfigChange('contact_phone', v)} />
+                    <TextareaInput label="Adresse" value={localConfig.contact_address || ''} onChange={(v) => handleConfigChange('contact_address', v)} rows={3} />
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                  <h3 className="text-xl font-semibold text-white mb-4">Réseaux sociaux</h3>
+                  <div className="space-y-4">
+                    <TextInput label="Facebook (URL complète)" value={localConfig.facebook_url || ''} onChange={(v) => handleConfigChange('facebook_url', v)} placeholder="https://facebook.com/votre-page" />
+                    <TextInput label="Instagram (URL complète)" value={localConfig.instagram_url || ''} onChange={(v) => handleConfigChange('instagram_url', v)} placeholder="https://instagram.com/votre-compte" />
+                    <TextInput label="Twitter/X (URL complète)" value={localConfig.twitter_url || ''} onChange={(v) => handleConfigChange('twitter_url', v)} placeholder="https://twitter.com/votre-compte" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeConfigTab === 'settings' && (
+              <div className="space-y-6">
+                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                  <h3 className="text-xl font-semibold text-white mb-4">Paramètres de livraison</h3>
+                  <div className="space-y-4">
+                    <NumberInput label="Frais de livraison (€)" value={localConfig.shipping_cost || 0} onChange={(v) => handleConfigChange('shipping_cost', v)} step={0.1} />
+                    <NumberInput label="Seuil livraison gratuite (€)" value={localConfig.free_shipping_threshold || 0} onChange={(v) => handleConfigChange('free_shipping_threshold', v)} />
+                    <NumberInput label="Délai de traitement (jours)" value={localConfig.order_processing_days || 0} onChange={(v) => handleConfigChange('order_processing_days', v)} />
+                    <NumberInput label="Délai commandes personnalisées (jours)" value={localConfig.custom_order_delay_days || 0} onChange={(v) => handleConfigChange('custom_order_delay_days', v)} />
+                  </div>
+                </div>
+
                 <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
                   <h3 className="text-xl font-semibold text-white mb-4">Options d'affichage</h3>
                   <div className="space-y-4">
@@ -464,7 +533,6 @@ const Admin: React.FC = () => {
   )
 }
 
-// Components utilitaires pour la configuration
 function ColorInput({ label, value, onChange }: { label: string, value: string, onChange: (v: string) => void }) {
   return (
     <div>
@@ -547,85 +615,4 @@ function CheckboxInput({ label, checked, onChange }: any) {
   )
 }
 
-export default Admin-6 border border-purple-500/20">
-                  <h3 className="text-xl font-semibold text-white mb-4">Couleurs du thème</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <ColorInput label="Couleur principale" value={localConfig.primary_color || '#3b82f6'} onChange={(v) => handleConfigChange('primary_color', v)} />
-                    <ColorInput label="Couleur secondaire" value={localConfig.secondary_color || '#8b5cf6'} onChange={(v) => handleConfigChange('secondary_color', v)} />
-                    <ColorInput label="Couleur accent" value={localConfig.accent_color || '#f59e0b'} onChange={(v) => handleConfigChange('accent_color', v)} />
-                    <ColorInput label="Fond de page" value={localConfig.background_color || '#ffffff'} onChange={(v) => handleConfigChange('background_color', v)} />
-                    <ColorInput label="Couleur du texte" value={localConfig.text_color || '#1f2937'} onChange={(v) => handleConfigChange('text_color', v)} />
-                    <ColorInput label="Fond du header" value={localConfig.header_bg_color || '#1e40af'} onChange={(v) => handleConfigChange('header_bg_color', v)} />
-                    <ColorInput label="Fond du footer" value={localConfig.footer_bg_color || '#1f2937'} onChange={(v) => handleConfigChange('footer_bg_color', v)} />
-                  </div>
-                </div>
-
-                {/* Preview */}
-                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
-                  <h3 className="text-lg font-semibold text-white mb-4">Aperçu</h3>
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-lg" style={{ backgroundColor: localConfig.header_bg_color }}>
-                      <p className="text-white font-bold">Header (exemple)</p>
-                    </div>
-                    <div className="flex gap-4">
-                      <button className="px-4 py-2 rounded text-white" style={{ backgroundColor: localConfig.primary_color }}>Bouton principal</button>
-                      <button className="px-4 py-2 rounded text-white" style={{ backgroundColor: localConfig.secondary_color }}>Bouton secondaire</button>
-                      <button className="px-4 py-2 rounded text-white" style={{ backgroundColor: localConfig.accent_color }}>Bouton accent</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Content Tab */}
-            {activeConfigTab === 'content' && (
-              <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
-                <h3 className="text-xl font-semibold text-white mb-4">Textes du site</h3>
-                <div className="space-y-4">
-                  <TextInput label="Nom du site" value={localConfig.site_name || ''} onChange={(v) => handleConfigChange('site_name', v)} />
-                  <TextInput label="Slogan" value={localConfig.site_slogan || ''} onChange={(v) => handleConfigChange('site_slogan', v)} />
-                  <TextInput label="Titre hero page d'accueil" value={localConfig.home_hero_title || ''} onChange={(v) => handleConfigChange('home_hero_title', v)} />
-                  <TextInput label="Sous-titre hero" value={localConfig.home_hero_subtitle || ''} onChange={(v) => handleConfigChange('home_hero_subtitle', v)} />
-                  <TextInput label="Titre page À propos" value={localConfig.about_title || ''} onChange={(v) => handleConfigChange('about_title', v)} />
-                  <TextareaInput label="Description À propos" value={localConfig.about_description || ''} onChange={(v) => handleConfigChange('about_description', v)} rows={6} />
-                </div>
-              </div>
-            )}
-
-            {/* Contact Tab */}
-            {activeConfigTab === 'contact' && (
-              <div className="space-y-6">
-                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
-                  <h3 className="text-xl font-semibold text-white mb-4">Coordonnées</h3>
-                  <div className="space-y-4">
-                    <TextInput label="Email de contact" type="email" value={localConfig.contact_email || ''} onChange={(v) => handleConfigChange('contact_email', v)} />
-                    <TextInput label="Téléphone" type="tel" value={localConfig.contact_phone || ''} onChange={(v) => handleConfigChange('contact_phone', v)} />
-                    <TextareaInput label="Adresse" value={localConfig.contact_address || ''} onChange={(v) => handleConfigChange('contact_address', v)} rows={3} />
-                  </div>
-                </div>
-
-                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
-                  <h3 className="text-xl font-semibold text-white mb-4">Réseaux sociaux</h3>
-                  <div className="space-y-4">
-                    <TextInput label="Facebook (URL complète)" value={localConfig.facebook_url || ''} onChange={(v) => handleConfigChange('facebook_url', v)} placeholder="https://facebook.com/votre-page" />
-                    <TextInput label="Instagram (URL complète)" value={localConfig.instagram_url || ''} onChange={(v) => handleConfigChange('instagram_url', v)} placeholder="https://instagram.com/votre-compte" />
-                    <TextInput label="Twitter/X (URL complète)" value={localConfig.twitter_url || ''} onChange={(v) => handleConfigChange('twitter_url', v)} placeholder="https://twitter.com/votre-compte" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Settings Tab */}
-            {activeConfigTab === 'settings' && (
-              <div className="space-y-6">
-                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
-                  <h3 className="text-xl font-semibold text-white mb-4">Paramètres de livraison</h3>
-                  <div className="space-y-4">
-                    <NumberInput label="Frais de livraison (€)" value={localConfig.shipping_cost || 0} onChange={(v) => handleConfigChange('shipping_cost', v)} step={0.1} />
-                    <NumberInput label="Seuil livraison gratuite (€)" value={localConfig.free_shipping_threshold || 0} onChange={(v) => handleConfigChange('free_shipping_threshold', v)} />
-                    <NumberInput label="Délai de traitement (jours)" value={localConfig.order_processing_days || 0} onChange={(v) => handleConfigChange('order_processing_days', v)} />
-                    <NumberInput label="Délai commandes personnalisées (jours)" value={localConfig.custom_order_delay_days || 0} onChange={(v) => handleConfigChange('custom_order_delay_days', v)} />
-                  </div>
-                </div>
-
-                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p
+export default Admin
