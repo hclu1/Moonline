@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
-import {Package, ShoppingCart, Users, TrendingUp, Plus, Edit, Trash2, Eye} from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import {Package, ShoppingCart, Users, TrendingUp, Plus, Edit, Trash2, Eye, Settings, Save, Palette, FileText, Mail} from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useConfigStore, SiteConfig } from '../store/configStore'
 
 interface Produit {
   id: string
@@ -22,12 +23,43 @@ interface Commande {
   date: string
 }
 
-/**
- * Interface d'administration
- */
+type ConfigTab = 'theme' | 'content' | 'contact' | 'settings'
+
 const Admin: React.FC = () => {
-  const [ongletActif, setOngletActif] = useState<'dashboard' | 'produits' | 'commandes' | 'clients'>('dashboard')
+  const [ongletActif, setOngletActif] = useState<'dashboard' | 'produits' | 'commandes' | 'clients' | 'configuration'>('dashboard')
   const [modaleProduit, setModaleProduit] = useState<{ ouvert: boolean; produit?: Produit }>({ ouvert: false })
+  
+  // Configuration
+  const { config, loading, loadConfig, updateMultipleConfig } = useConfigStore()
+  const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('theme')
+  const [localConfig, setLocalConfig] = useState<Partial<SiteConfig>>({})
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    loadConfig()
+  }, [loadConfig])
+
+  useEffect(() => {
+    if (config) {
+      setLocalConfig(config)
+    }
+  }, [config])
+
+  const handleConfigChange = (key: keyof SiteConfig, value: any) => {
+    setLocalConfig(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleSaveConfig = async () => {
+    setSaving(true)
+    const success = await updateMultipleConfig(localConfig)
+    setSaving(false)
+    
+    if (success) {
+      toast.success('Configuration enregistrée avec succès !')
+    } else {
+      toast.error('Erreur lors de l\'enregistrement')
+    }
+  }
 
   // Données d'exemple avec images
   const [produits] = useState<Produit[]>([
@@ -90,7 +122,6 @@ const Admin: React.FC = () => {
     }
   ])
 
-  // Statistiques
   const stats = {
     totalProduits: produits.length,
     totalCommandes: commandes.length,
@@ -102,7 +133,15 @@ const Admin: React.FC = () => {
     { id: 'dashboard', nom: 'Tableau de bord', icone: TrendingUp },
     { id: 'produits', nom: 'Produits', icone: Package },
     { id: 'commandes', nom: 'Commandes', icone: ShoppingCart },
-    { id: 'clients', nom: 'Clients', icone: Users }
+    { id: 'clients', nom: 'Clients', icone: Users },
+    { id: 'configuration', nom: 'Configuration', icone: Settings }
+  ]
+
+  const configTabs = [
+    { id: 'theme' as ConfigTab, label: 'Thème & Couleurs', icon: Palette },
+    { id: 'content' as ConfigTab, label: 'Contenu', icon: FileText },
+    { id: 'contact' as ConfigTab, label: 'Coordonnées', icon: Mail },
+    { id: 'settings' as ConfigTab, label: 'Paramètres', icon: Settings },
   ]
 
   const getStatutCommande = (statut: string) => {
@@ -129,7 +168,6 @@ const Admin: React.FC = () => {
 
   return (
     <div className="min-h-screen pt-16">
-      {/* En-tête admin */}
       <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 backdrop-blur-sm py-6 sm:py-8 border-b border-purple-500/20">
         <div className="max-w-7xl mx-auto px-3 sm:px-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Administration MOONLINE ART</h1>
@@ -138,15 +176,14 @@ const Admin: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
-        {/* Navigation des onglets */}
-        <div className="flex space-x-1 mb-8 bg-slate-800/30 backdrop-blur-sm rounded-lg p-1 border border-purple-500/20">
+        <div className="flex space-x-1 mb-8 bg-slate-800/30 backdrop-blur-sm rounded-lg p-1 border border-purple-500/20 overflow-x-auto">
           {onglets.map(onglet => {
             const IconeComponent = onglet.icone
             return (
               <button
                 key={onglet.id}
                 onClick={() => setOngletActif(onglet.id as any)}
-                className={`flex items-center space-x-2 px-4 py-3 rounded-lg font-medium transition-all ${
+                className={`flex items-center space-x-2 px-4 py-3 rounded-lg font-medium transition-all whitespace-nowrap ${
                   ongletActif === onglet.id
                     ? 'bg-purple-600 text-white'
                     : 'text-gray-300 hover:text-white hover:bg-slate-700/50'
@@ -159,10 +196,9 @@ const Admin: React.FC = () => {
           })}
         </div>
 
-        {/* Contenu des onglets */}
+        {/* DASHBOARD */}
         {ongletActif === 'dashboard' && (
           <div className="space-y-8">
-            {/* Cartes de statistiques */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
                 <div className="flex items-center justify-between">
@@ -207,7 +243,6 @@ const Admin: React.FC = () => {
               </div>
             </div>
 
-            {/* Commandes récentes */}
             <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
               <h3 className="text-xl font-bold text-white mb-4">Commandes récentes</h3>
               <div className="space-y-3">
@@ -233,9 +268,9 @@ const Admin: React.FC = () => {
           </div>
         )}
 
+        {/* PRODUITS */}
         {ongletActif === 'produits' && (
           <div className="space-y-6">
-            {/* En-tête avec bouton d'ajout */}
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold text-white">Gestion des produits</h2>
               <button
@@ -247,7 +282,6 @@ const Admin: React.FC = () => {
               </button>
             </div>
 
-            {/* Liste des produits avec vignettes */}
             <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl border border-purple-500/20 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -265,15 +299,10 @@ const Admin: React.FC = () => {
                   <tbody>
                     {produits.map(produit => (
                       <tr key={produit.id} className="border-t border-slate-700/50">
-                        {/* Vignette du produit */}
                         <td className="p-4">
                           <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-700/50 border border-purple-500/20">
                             {produit.image ? (
-                              <img
-                                src={produit.image}
-                                alt={produit.nom}
-                                className="w-full h-full object-cover"
-                              />
+                              <img src={produit.image} alt={produit.nom} className="w-full h-full object-cover" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
                                 <Package className="text-gray-500" size={24} />
@@ -281,9 +310,7 @@ const Admin: React.FC = () => {
                             )}
                           </div>
                         </td>
-                        <td className="p-4">
-                          <div className="text-white font-medium">{produit.nom}</div>
-                        </td>
+                        <td className="p-4 text-white font-medium">{produit.nom}</td>
                         <td className="p-4 text-gray-300">{produit.categorie}</td>
                         <td className="p-4 text-white font-medium">{produit.prix.toFixed(2)} €</td>
                         <td className="p-4">
@@ -302,18 +329,9 @@ const Admin: React.FC = () => {
                         </td>
                         <td className="p-4">
                           <div className="flex space-x-2">
-                            <button className="text-blue-400 hover:text-blue-300">
-                              <Eye size={16} />
-                            </button>
-                            <button 
-                              onClick={() => setModaleProduit({ ouvert: true, produit })}
-                              className="text-yellow-400 hover:text-yellow-300"
-                            >
-                              <Edit size={16} />
-                            </button>
-                            <button className="text-red-400 hover:text-red-300">
-                              <Trash2 size={16} />
-                            </button>
+                            <button className="text-blue-400 hover:text-blue-300"><Eye size={16} /></button>
+                            <button onClick={() => setModaleProduit({ ouvert: true, produit })} className="text-yellow-400 hover:text-yellow-300"><Edit size={16} /></button>
+                            <button className="text-red-400 hover:text-red-300"><Trash2 size={16} /></button>
                           </div>
                         </td>
                       </tr>
@@ -325,10 +343,10 @@ const Admin: React.FC = () => {
           </div>
         )}
 
+        {/* COMMANDES */}
         {ongletActif === 'commandes' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Gestion des commandes</h2>
-
             <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl border border-purple-500/20 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -347,9 +365,7 @@ const Admin: React.FC = () => {
                       const { style, label } = getStatutCommande(commande.statut)
                       return (
                         <tr key={commande.id} className="border-t border-slate-700/50">
-                          <td className="p-4">
-                            <div className="text-white font-medium">{commande.id}</div>
-                          </td>
+                          <td className="p-4 text-white font-medium">{commande.id}</td>
                           <td className="p-4">
                             <div className="text-white">{commande.client}</div>
                             <div className="text-gray-400 text-sm">{commande.email}</div>
@@ -369,9 +385,7 @@ const Admin: React.FC = () => {
                             </select>
                           </td>
                           <td className="p-4">
-                            <button className="text-blue-400 hover:text-blue-300">
-                              <Eye size={16} />
-                            </button>
+                            <button className="text-blue-400 hover:text-blue-300"><Eye size={16} /></button>
                           </td>
                         </tr>
                       )
@@ -383,6 +397,7 @@ const Admin: React.FC = () => {
           </div>
         )}
 
+        {/* CLIENTS */}
         {ongletActif === 'clients' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Gestion des clients</h2>
@@ -393,9 +408,224 @@ const Admin: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* CONFIGURATION */}
+        {ongletActif === 'configuration' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-white">Configuration du site</h2>
+              <button
+                onClick={handleSaveConfig}
+                disabled={saving}
+                className="flex items-center gap-2 bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 font-semibold"
+              >
+                <Save size={20} />
+                {saving ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
+            </div>
+
+            {/* Config Tabs */}
+            <div className="flex space-x-1 bg-slate-800/30 backdrop-blur-sm rounded-lg p-1 border border-purple-500/20 overflow-x-auto">
+              {configTabs.map((tab) => {
+                const Icon = tab.icon
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveConfigTab(tab.id)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap ${
+                      activeConfigTab === tab.id
+                        ? 'bg-purple-600 text-white'
+                        : 'text-gray-300 hover:text-white hover:bg-slate-700/50'
+                    }`}
+                  >
+                    <Icon size={18} />
+                    {tab.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Theme Tab */}
+            {activeConfigTab === 'theme' && (
+              <div className="space-y-6">
+                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                  <h3 className="text-xl font-semibold text-white mb-4">Options d'affichage</h3>
+                  <div className="space-y-4">
+                    <CheckboxInput label="Afficher les prix" checked={localConfig.show_prices || false} onChange={(v) => handleConfigChange('show_prices', v)} />
+                    <CheckboxInput label="Autoriser les commandes personnalisées" checked={localConfig.allow_custom_orders || false} onChange={(v) => handleConfigChange('allow_custom_orders', v)} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
-export default Admin
+// Components utilitaires pour la configuration
+function ColorInput({ label, value, onChange }: { label: string, value: string, onChange: (v: string) => void }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-2 text-gray-300">{label}</label>
+      <div className="flex gap-2">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-10 w-20 border border-purple-500/30 rounded cursor-pointer bg-slate-700/50"
+        />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1 px-3 py-2 border border-purple-500/30 rounded bg-slate-700/50 text-white focus:ring-2 focus:ring-purple-500"
+        />
+      </div>
+    </div>
+  )
+}
+
+function TextInput({ label, value, onChange, type = 'text', placeholder = '' }: any) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-2 text-gray-300">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 border border-purple-500/30 rounded bg-slate-700/50 text-white focus:ring-2 focus:ring-purple-500"
+      />
+    </div>
+  )
+}
+
+function TextareaInput({ label, value, onChange, rows = 4 }: any) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-2 text-gray-300">{label}</label>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        className="w-full px-3 py-2 border border-purple-500/30 rounded bg-slate-700/50 text-white focus:ring-2 focus:ring-purple-500"
+      />
+    </div>
+  )
+}
+
+function NumberInput({ label, value, onChange, step = 1 }: any) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-2 text-gray-300">{label}</label>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        step={step}
+        className="w-full px-3 py-2 border border-purple-500/30 rounded bg-slate-700/50 text-white focus:ring-2 focus:ring-purple-500"
+      />
+    </div>
+  )
+}
+
+function CheckboxInput({ label, checked, onChange }: any) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer group">
+      <div className="relative">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          className="w-5 h-5 text-purple-600 rounded border-purple-500/30 bg-slate-700/50 focus:ring-2 focus:ring-purple-500"
+        />
+      </div>
+      <span className="text-sm font-medium text-gray-300 group-hover:text-white">{label}</span>
+    </label>
+  )
+}
+
+export default Admin-6 border border-purple-500/20">
+                  <h3 className="text-xl font-semibold text-white mb-4">Couleurs du thème</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <ColorInput label="Couleur principale" value={localConfig.primary_color || '#3b82f6'} onChange={(v) => handleConfigChange('primary_color', v)} />
+                    <ColorInput label="Couleur secondaire" value={localConfig.secondary_color || '#8b5cf6'} onChange={(v) => handleConfigChange('secondary_color', v)} />
+                    <ColorInput label="Couleur accent" value={localConfig.accent_color || '#f59e0b'} onChange={(v) => handleConfigChange('accent_color', v)} />
+                    <ColorInput label="Fond de page" value={localConfig.background_color || '#ffffff'} onChange={(v) => handleConfigChange('background_color', v)} />
+                    <ColorInput label="Couleur du texte" value={localConfig.text_color || '#1f2937'} onChange={(v) => handleConfigChange('text_color', v)} />
+                    <ColorInput label="Fond du header" value={localConfig.header_bg_color || '#1e40af'} onChange={(v) => handleConfigChange('header_bg_color', v)} />
+                    <ColorInput label="Fond du footer" value={localConfig.footer_bg_color || '#1f2937'} onChange={(v) => handleConfigChange('footer_bg_color', v)} />
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                  <h3 className="text-lg font-semibold text-white mb-4">Aperçu</h3>
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg" style={{ backgroundColor: localConfig.header_bg_color }}>
+                      <p className="text-white font-bold">Header (exemple)</p>
+                    </div>
+                    <div className="flex gap-4">
+                      <button className="px-4 py-2 rounded text-white" style={{ backgroundColor: localConfig.primary_color }}>Bouton principal</button>
+                      <button className="px-4 py-2 rounded text-white" style={{ backgroundColor: localConfig.secondary_color }}>Bouton secondaire</button>
+                      <button className="px-4 py-2 rounded text-white" style={{ backgroundColor: localConfig.accent_color }}>Bouton accent</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Content Tab */}
+            {activeConfigTab === 'content' && (
+              <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                <h3 className="text-xl font-semibold text-white mb-4">Textes du site</h3>
+                <div className="space-y-4">
+                  <TextInput label="Nom du site" value={localConfig.site_name || ''} onChange={(v) => handleConfigChange('site_name', v)} />
+                  <TextInput label="Slogan" value={localConfig.site_slogan || ''} onChange={(v) => handleConfigChange('site_slogan', v)} />
+                  <TextInput label="Titre hero page d'accueil" value={localConfig.home_hero_title || ''} onChange={(v) => handleConfigChange('home_hero_title', v)} />
+                  <TextInput label="Sous-titre hero" value={localConfig.home_hero_subtitle || ''} onChange={(v) => handleConfigChange('home_hero_subtitle', v)} />
+                  <TextInput label="Titre page À propos" value={localConfig.about_title || ''} onChange={(v) => handleConfigChange('about_title', v)} />
+                  <TextareaInput label="Description À propos" value={localConfig.about_description || ''} onChange={(v) => handleConfigChange('about_description', v)} rows={6} />
+                </div>
+              </div>
+            )}
+
+            {/* Contact Tab */}
+            {activeConfigTab === 'contact' && (
+              <div className="space-y-6">
+                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                  <h3 className="text-xl font-semibold text-white mb-4">Coordonnées</h3>
+                  <div className="space-y-4">
+                    <TextInput label="Email de contact" type="email" value={localConfig.contact_email || ''} onChange={(v) => handleConfigChange('contact_email', v)} />
+                    <TextInput label="Téléphone" type="tel" value={localConfig.contact_phone || ''} onChange={(v) => handleConfigChange('contact_phone', v)} />
+                    <TextareaInput label="Adresse" value={localConfig.contact_address || ''} onChange={(v) => handleConfigChange('contact_address', v)} rows={3} />
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                  <h3 className="text-xl font-semibold text-white mb-4">Réseaux sociaux</h3>
+                  <div className="space-y-4">
+                    <TextInput label="Facebook (URL complète)" value={localConfig.facebook_url || ''} onChange={(v) => handleConfigChange('facebook_url', v)} placeholder="https://facebook.com/votre-page" />
+                    <TextInput label="Instagram (URL complète)" value={localConfig.instagram_url || ''} onChange={(v) => handleConfigChange('instagram_url', v)} placeholder="https://instagram.com/votre-compte" />
+                    <TextInput label="Twitter/X (URL complète)" value={localConfig.twitter_url || ''} onChange={(v) => handleConfigChange('twitter_url', v)} placeholder="https://twitter.com/votre-compte" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Settings Tab */}
+            {activeConfigTab === 'settings' && (
+              <div className="space-y-6">
+                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                  <h3 className="text-xl font-semibold text-white mb-4">Paramètres de livraison</h3>
+                  <div className="space-y-4">
+                    <NumberInput label="Frais de livraison (€)" value={localConfig.shipping_cost || 0} onChange={(v) => handleConfigChange('shipping_cost', v)} step={0.1} />
+                    <NumberInput label="Seuil livraison gratuite (€)" value={localConfig.free_shipping_threshold || 0} onChange={(v) => handleConfigChange('free_shipping_threshold', v)} />
+                    <NumberInput label="Délai de traitement (jours)" value={localConfig.order_processing_days || 0} onChange={(v) => handleConfigChange('order_processing_days', v)} />
+                    <NumberInput label="Délai commandes personnalisées (jours)" value={localConfig.custom_order_delay_days || 0} onChange={(v) => handleConfigChange('custom_order_delay_days', v)} />
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p
