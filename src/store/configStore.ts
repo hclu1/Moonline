@@ -169,15 +169,14 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
         .select('config_snapshot, version_number')
         .order('version_number', { ascending: false })
         .limit(1)
-        .single()
       
-      if (!historyError && historyData) {
+      if (!historyError && historyData && historyData.length > 0) {
         // Si on a une version dans l'historique, l'utiliser
-        const snapshot = historyData.config_snapshot as SiteConfig
+        const snapshot = historyData[0].config_snapshot as SiteConfig
         set({ 
           config: snapshot, 
           loading: false,
-          currentVersion: historyData.version_number 
+          currentVersion: historyData[0].version_number 
         })
         return
       }
@@ -187,15 +186,14 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
         .from('site_config')
         .select('*')
         .limit(1)
-        .single()
       
-      if (error) {
+      if (error || !data || data.length === 0) {
         console.error('Erreur chargement config:', error)
         set({ config: defaultConfig, loading: false })
         return
       }
       
-      set({ config: data || defaultConfig, loading: false })
+      set({ config: data[0] || defaultConfig, loading: false })
     } catch (error: any) {
       console.error('Erreur chargement config:', error)
       set({ 
