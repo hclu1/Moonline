@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabaseClient'
 
 export interface SiteConfig {
-  // Couleurs existantes
+  id?: string
+  // Couleurs
   primary_color: string
   secondary_color: string
   accent_color: string
@@ -11,7 +12,7 @@ export interface SiteConfig {
   header_bg_color: string
   footer_bg_color: string
   
-  // Contenu textuel
+  // Contenu
   site_name: string
   site_slogan: string
   home_hero_title: string
@@ -35,7 +36,6 @@ export interface SiteConfig {
   show_prices: boolean
   allow_custom_orders: boolean
   
-  // ✨ NOUVEAUX PARAMÈTRES VISUELS
   // Animations de fond
   enable_particles: boolean
   particles_color: string
@@ -56,7 +56,7 @@ export interface SiteConfig {
   gradient_start_color: string
   gradient_end_color: string
   
-  // Logos et icônes
+  // Logos et icones
   logo_url: string
   favicon_url: string
   hero_icon_url: string
@@ -66,7 +66,7 @@ export interface SiteConfig {
   heading_font_family: string
   base_font_size: number
   
-  // Espacements et bordures
+  // Design
   border_radius: string
   section_spacing: string
   card_shadow: string
@@ -76,9 +76,20 @@ interface ConfigStore {
   config: SiteConfig | null
   loading: boolean
   error: string | null
+  configHistory: ConfigVersion[]
+  currentVersion: number | null
+  
   loadConfig: () => Promise<void>
-  updateConfig: (key: keyof SiteConfig, value: any) => Promise<boolean>
-  updateMultipleConfig: (updates: Partial<SiteConfig>) => Promise<boolean>
+  updateConfig: (updates: Partial<SiteConfig>, description?: string) => Promise<boolean>
+  loadConfigHistory: () => Promise<void>
+  restoreVersion: (versionNumber: number) => Promise<boolean>
+}
+
+interface ConfigVersion {
+  id: string
+  version_number: number
+  created_at: string
+  description: string | null
 }
 
 const defaultConfig: SiteConfig = {
@@ -95,11 +106,11 @@ const defaultConfig: SiteConfig = {
   home_hero_title: 'Bienvenue dans l\'univers MOONLINE',
   home_hero_subtitle: 'Découvrez notre collection unique d\'art spatial',
   about_title: 'Notre histoire',
-  about_description: 'MOONLINE ART est né d\'une passion pour l\'art et l\'univers...',
+  about_description: 'MOONLINE ART est né d\'une passion pour l\'art et l\'univers.',
   
   contact_email: 'contact@moonlineart.com',
   contact_phone: '+33 1 23 45 67 89',
-  contact_address: '123 Rue des Étoiles, 75001 Paris, France',
+  contact_address: '',
   facebook_url: '',
   instagram_url: '',
   twitter_url: '',
@@ -111,7 +122,6 @@ const defaultConfig: SiteConfig = {
   show_prices: true,
   allow_custom_orders: true,
   
-  // Valeurs par défaut pour les nouveaux paramètres
   enable_particles: true,
   particles_color: '#a855f7',
   particles_count: 50,
@@ -154,68 +164,76 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
       const { data, error } = await supabase
         .from('site_config')
         .select('*')
+        .limit(1)
         .single()
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 = pas de données
-        throw error
+      
+      if (error) {
+        console.error('Erreur chargement config:', error)
+        set({ config: defaultConfig, loading: false })
+        return
       }
+      
+      set({ config: data || defaultConfig, loading: false })
+    } catch (error: any) {
+      console.error('Erreur chargement config:', error)
+      set({ 
+        error: error.message, 
+        loading: false,
+        config: defaultConfig 
+      })
+    }
+  },
 
-      if (data) {
-        set({ config: { ...defaultConfig, ...data }, loading: false })
-      } else {
-        // Créer la config par défaut si elle n'existe pas
-        const { data: newData, error: insertError } = await supabase
+  updateConfig: async (updates: Partial<SiteConfig>) => {
+    try {
+      const currentConfig = get().config
+      if (!currentConfig?.id) {
+        // Si pas d'ID, on fait un INSERT
+        const { data, error } = await supabase
           .from('site_config')
-          .insert([defaultConfig])
+          .insert({ ...defaultConfig, ...updates })
           .select()
           .single()
-
-        if (insertError) throw insertError
-        set({ config: newData, loading: false })
+        
+        if (error) throw error
+        
+        set({ config: data })
+        return true
       }
-    } catch (error) {
-      console.error('Erreur chargement config:', error)
-      set({ error: 'Erreur de chargement', loading: false, config: defaultConfig })
-    }
-  },
-
-  updateConfig: async (key, value) => {
-    const currentConfig = get().config
-    if (!currentConfig) return false
-
-    try {
-      const { error } = await supabase
-        .from('site_config')
-        .update({ [key]: value })
-        .eq('id', (currentConfig as any).id)
-
-      if (error) throw error
-
-      set({ config: { ...currentConfig, [key]: value } })
-      return true
-    } catch (error) {
-      console.error('Erreur mise à jour:', error)
-      return false
-    }
-  },
-
-  updateMultipleConfig: async (updates) => {
-    const currentConfig = get().config
-    if (!currentConfig) return false
-
-    try {
-      const { error } = await supabase
+      
+      // Sinon UPDATE
+      const { data, error } = await supabase
         .from('site_config')
         .update(updates)
-        .eq('id', (currentConfig as any).id)
-
+        .eq('id', currentConfig.id)
+        .select()
+        .single()
+      
       if (error) throw error
-
-      set({ config: { ...currentConfig, ...updates } })
+      
+      set({ config: data })
       return true
     } catch (error) {
-      console.error('Erreur mise à jour multiple:', error)
+      console.error('Erreur update config:', error)
       return false
     }
-  },
+  }
 }))
+
+// Hook personnalisé pour appliquer le thème
+export const useTheme = () => {
+  const config = useConfigStore(state => state.config)
+  
+  // Appliquer les couleurs au document
+  if (config && typeof document !== 'undefined') {
+    document.documentElement.style.setProperty('--color-primary', config.primary_color)
+    document.documentElement.style.setProperty('--color-secondary', config.secondary_color)
+    document.documentElement.style.setProperty('--color-accent', config.accent_color)
+    document.documentElement.style.setProperty('--color-background', config.background_color)
+    document.documentElement.style.setProperty('--color-text', config.text_color)
+    document.documentElement.style.setProperty('--color-header-bg', config.header_bg_color)
+    document.documentElement.style.setProperty('--color-footer-bg', config.footer_bg_color)
+  }
+  
+  return config
+}

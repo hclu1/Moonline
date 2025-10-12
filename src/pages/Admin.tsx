@@ -198,7 +198,6 @@ const Admin: React.FC = () => {
           })}
         </div>
 
-        {/* DASHBOARD - reste identique */}
         {ongletActif === 'dashboard' && (
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -270,10 +269,6 @@ const Admin: React.FC = () => {
           </div>
         )}
 
-        {/* PRODUITS - reste identique - code tronqué pour brièveté */}
-        {/* COMMANDES - reste identique */}
-        {/* CLIENTS - reste identique */}
-
         {ongletActif === 'configuration' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -308,7 +303,6 @@ const Admin: React.FC = () => {
               })}
             </div>
 
-            {/* THEME TAB - Identique à votre code actuel */}
             {activeConfigTab === 'theme' && (
               <div className="space-y-6">
                 <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
@@ -340,15 +334,12 @@ const Admin: React.FC = () => {
               </div>
             )}
 
-            {/* NOUVEAU: VISUAL TAB */}
             {activeConfigTab === 'visual' && (
               <div className="space-y-6">
-                {/* Animations de fond */}
                 <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
                   <h3 className="text-xl font-semibold text-white mb-4">Animations de fond</h3>
                   
                   <div className="space-y-6">
-                    {/* Particules */}
                     <div className="border-b border-purple-500/20 pb-4">
                       <CheckboxInput
                         label="Activer les particules"
@@ -373,7 +364,6 @@ const Admin: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Étoiles */}
                     <div className="border-b border-purple-500/20 pb-4">
                       <CheckboxInput
                         label="Activer les étoiles"
@@ -398,7 +388,6 @@ const Admin: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Gradients */}
                     <div>
                       <CheckboxInput
                         label="Activer les arrière-plans dégradés"
@@ -432,7 +421,6 @@ const Admin: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Images de fond */}
                 <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
                   <h3 className="text-xl font-semibold text-white mb-4">Images de fond des sections</h3>
                   
@@ -464,7 +452,6 @@ const Admin: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Logos et icônes */}
                 <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
                   <h3 className="text-xl font-semibold text-white mb-4">Logos et icônes</h3>
                   
@@ -491,10 +478,8 @@ const Admin: React.FC = () => {
               </div>
             )}
 
-            {/* NOUVEAU: ADVANCED TAB */}
             {activeConfigTab === 'advanced' && (
               <div className="space-y-6">
-                {/* Typographie */}
                 <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
                   <h3 className="text-xl font-semibold text-white mb-4">Typographie</h3>
                   
@@ -522,7 +507,6 @@ const Admin: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Espacements et design */}
                 <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
                   <h3 className="text-xl font-semibold text-white mb-4">Design et espacements</h3>
                   
@@ -550,7 +534,6 @@ const Admin: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Aperçu */}
                 <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
                   <h3 className="text-xl font-semibold text-white mb-4">Aperçu du design</h3>
                   
@@ -578,7 +561,6 @@ const Admin: React.FC = () => {
               </div>
             )}
 
-            {/* CONTENT TAB - Identique */}
             {activeConfigTab === 'content' && (
               <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
                 <h3 className="text-xl font-semibold text-white mb-4">Textes du site</h3>
@@ -593,7 +575,6 @@ const Admin: React.FC = () => {
               </div>
             )}
 
-            {/* CONTACT TAB - Identique */}
             {activeConfigTab === 'contact' && (
               <div className="space-y-6">
                 <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
@@ -616,7 +597,6 @@ const Admin: React.FC = () => {
               </div>
             )}
 
-            {/* SETTINGS TAB - Identique */}
             {activeConfigTab === 'settings' && (
               <div className="space-y-6">
                 <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
