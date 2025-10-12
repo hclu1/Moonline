@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabaseClient'
 
 export interface SiteConfig {
-  id?: string
   // Couleurs
   primary_color: string
   secondary_color: string
@@ -36,7 +35,7 @@ export interface SiteConfig {
   show_prices: boolean
   allow_custom_orders: boolean
   
-  // Animations de fond
+  // Animations
   enable_particles: boolean
   particles_color: string
   particles_count: number
@@ -56,7 +55,7 @@ export interface SiteConfig {
   gradient_start_color: string
   gradient_end_color: string
   
-  // Logos et icones
+  // Logos
   logo_url: string
   favicon_url: string
   hero_icon_url: string
@@ -72,24 +71,22 @@ export interface SiteConfig {
   card_shadow: string
 }
 
-interface ConfigStore {
-  config: SiteConfig | null
-  loading: boolean
-  error: string | null
-  configHistory: ConfigVersion[]
-  currentVersion: number | null
-  
-  loadConfig: () => Promise<void>
-  updateConfig: (updates: Partial<SiteConfig>, description?: string) => Promise<boolean>
-  loadConfigHistory: () => Promise<void>
-  restoreVersion: (versionNumber: number) => Promise<boolean>
+interface ConfigHistory {
+  id: string
+  config_data: SiteConfig
+  label: string
+  created_at: string
 }
 
-interface ConfigVersion {
-  id: string
-  version_number: number
-  created_at: string
-  description: string | null
+interface ConfigStore {
+  config: SiteConfig | null
+  configHistory: ConfigHistory[]
+  loading: boolean
+  error: string | null
+  loadConfig: () => Promise<void>
+  updateMultipleConfig: (updates: Partial<SiteConfig>, label?: string) => Promise<boolean>
+  loadConfigHistory: () => Promise<void>
+  restoreVersion: (historyId: string) => Promise<boolean>
 }
 
 const defaultConfig: SiteConfig = {
@@ -106,7 +103,7 @@ const defaultConfig: SiteConfig = {
   home_hero_title: 'Bienvenue dans l\'univers MOONLINE',
   home_hero_subtitle: 'Découvrez notre collection unique d\'art spatial',
   about_title: 'Notre histoire',
-  about_description: 'MOONLINE ART est né d\'une passion pour l\'art et l\'univers.',
+  about_description: '',
   
   contact_email: 'contact@moonlineart.com',
   contact_phone: '+33 1 23 45 67 89',
@@ -154,6 +151,7 @@ const defaultConfig: SiteConfig = {
 
 export const useConfigStore = create<ConfigStore>((set, get) => ({
   config: null,
+  configHistory: [],
   loading: false,
   error: null,
 
@@ -164,76 +162,101 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
       const { data, error } = await supabase
         .from('site_config')
         .select('*')
-        .limit(1)
         .single()
-      
-      if (error) {
-        console.error('Erreur chargement config:', error)
-        set({ config: defaultConfig, loading: false })
-        return
+
+      if (error && error.code !== 'PGRST116') {
+        throw error
       }
-      
-      set({ config: data || defaultConfig, loading: false })
-    } catch (error: any) {
+
+      if (data) {
+        set({ config: { ...defaultConfig, ...data }, loading: false })
+      } else {
+        const { data: newData, error: insertError } = await supabase
+          .from('site_config')
+          .insert([defaultConfig])
+          .select()
+          .single()
+
+        if (insertError) throw insertError
+        set({ config: newData, loading: false })
+      }
+    } catch (error) {
       console.error('Erreur chargement config:', error)
-      set({ 
-        error: error.message, 
-        loading: false,
-        config: defaultConfig 
-      })
+      set({ error: 'Erreur de chargement', loading: false, config: defaultConfig })
     }
   },
 
-  updateConfig: async (updates: Partial<SiteConfig>) => {
+  updateMultipleConfig: async (updates, label = '') => {
+    const currentConfig = get().config
+    if (!currentConfig) return false
+
     try {
-      const currentConfig = get().config
-      if (!currentConfig?.id) {
-        // Si pas d'ID, on fait un INSERT
-        const { data, error } = await supabase
-          .from('site_config')
-          .insert({ ...defaultConfig, ...updates })
-          .select()
-          .single()
-        
-        if (error) throw error
-        
-        set({ config: data })
-        return true
+      // 1. Sauvegarder dans l'historique
+      if (label) {
+        await supabase
+          .from('site_config_history')
+          .insert([{
+            config_data: { ...currentConfig, ...updates },
+            label: label || `Modification ${new Date().toLocaleString()}`
+          }])
       }
-      
-      // Sinon UPDATE
-      const { data, error } = await supabase
+
+      // 2. Mettre à jour la config actuelle
+      const { error } = await supabase
         .from('site_config')
         .update(updates)
-        .eq('id', currentConfig.id)
-        .select()
-        .single()
-      
+        .eq('id', (currentConfig as any).id)
+
       if (error) throw error
+
+      // 3. Mettre à jour le state local
+      set({ config: { ...currentConfig, ...updates } })
       
-      set({ config: data })
+      // 4. Recharger l'historique
+      get().loadConfigHistory()
+      
       return true
     } catch (error) {
-      console.error('Erreur update config:', error)
+      console.error('Erreur mise à jour:', error)
       return false
     }
-  }
-}))
+  },
 
-// Hook personnalisé pour appliquer le thème
-export const useTheme = () => {
-  const config = useConfigStore(state => state.config)
-  
-  // Appliquer les couleurs au document
-  if (config && typeof document !== 'undefined') {
-    document.documentElement.style.setProperty('--color-primary', config.primary_color)
-    document.documentElement.style.setProperty('--color-secondary', config.secondary_color)
-    document.documentElement.style.setProperty('--color-accent', config.accent_color)
-    document.documentElement.style.setProperty('--color-background', config.background_color)
-    document.documentElement.style.setProperty('--color-text', config.text_color)
-    document.documentElement.style.setProperty('--color-header-bg', config.header_bg_color)
-    document.documentElement.style.setProperty('--color-footer-bg', config.footer_bg_color)
-  }
-  
-  return config
-}
+  loadConfigHistory: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('site_config_history')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (error) throw error
+      
+      set({ configHistory: data || [] })
+    } catch (error) {
+      console.error('Erreur chargement historique:', error)
+    }
+  },
+
+  restoreVersion: async (historyId: string) => {
+    try {
+      const { data: historyEntry, error: fetchError } = await supabase
+        .from('site_config_history')
+        .select('*')
+        .eq('id', historyId)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      const success = await get().updateMultipleConfig(
+        historyEntry.config_data,
+        `Restauration: ${historyEntry.label}`
+      )
+
+      return success
+    } catch (error) {
+      console.error('Erreur restauration:', error)
+      return false
+    }
+  },
+}))

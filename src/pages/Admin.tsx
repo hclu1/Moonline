@@ -721,13 +721,13 @@ function ImageUploadInput({ label, value, onChange }: { label: string, value: st
       const fileName = `config/${Date.now()}.${fileExt}`
 
       const { error } = await supabase.storage
-        .from('produits-images')
+        .from('PRODUITS-IMAGES')
         .upload(fileName, file)
 
       if (error) throw error
 
       const { data } = supabase.storage
-        .from('produits-images')
+        .from('PRODUITS-IMAGES')
         .getPublicUrl(fileName)
 
       onChange(data.publicUrl)
