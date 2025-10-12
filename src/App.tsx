@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useEffect } from 'react'
-import { useConfigStore, useTheme } from './store/configStore'
+import { useConfigStore } from './store/configStore'
 
 import Navigation from './components/Navigation'
 import Accueil from './pages/Accueil'
@@ -11,23 +11,32 @@ import Contact from './pages/Contact'
 import CommandePersonnalisee from './pages/CommandePersonnalisee'
 import Panier from './pages/Panier'
 import Admin from './pages/Admin'
-import Configuration from './pages/Configuration'
 import ConditionsVente from './pages/ConditionsVente'
 
 function App() {
-  const { loadConfig } = useConfigStore()
+  const { loadConfig, config } = useConfigStore()
   
   // Charger la configuration au démarrage
   useEffect(() => {
     loadConfig()
   }, [loadConfig])
-  
-  // Appliquer le thème
-  useTheme()
+
+  // Appliquer le thème au document
+  useEffect(() => {
+    if (config) {
+      document.documentElement.style.setProperty('--color-primary', config.primary_color)
+      document.documentElement.style.setProperty('--color-secondary', config.secondary_color)
+      document.documentElement.style.setProperty('--color-accent', config.accent_color)
+      document.documentElement.style.setProperty('--color-background', config.background_color)
+      document.documentElement.style.setProperty('--color-text', config.text_color)
+      document.documentElement.style.setProperty('--color-header-bg', config.header_bg_color)
+      document.documentElement.style.setProperty('--color-footer-bg', config.footer_bg_color)
+    }
+  }, [config])
 
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen" style={{ backgroundColor: config?.background_color || '#0f172a' }}>
         <Navigation />
         <Routes>
           <Route path="/" element={<Accueil />} />
@@ -37,7 +46,6 @@ function App() {
           <Route path="/commande-personnalisee" element={<CommandePersonnalisee />} />
           <Route path="/panier" element={<Panier />} />
           <Route path="/admin" element={<Admin />} />
-          <Route path="/admin/configuration" element={<Configuration />} />
           <Route path="/conditions-vente" element={<ConditionsVente />} />
         </Routes>
         <Toaster 

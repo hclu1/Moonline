@@ -1,46 +1,53 @@
-
 import React from 'react'
 import { Link } from 'react-router-dom'
-import {Palette, Star, Sparkles} from 'lucide-react'
+import { Palette, Star, Sparkles } from 'lucide-react'
+import { useConfigStore } from '../store/configStore'
 
-/**
- * Page d'accueil de MOONLINE ART
- * Présente la boutique avec un design astronomique et des liens vers les sections principales
- */
 const Accueil: React.FC = () => {
+  const config = useConfigStore(state => state.config)
+
   return (
     <div className="min-h-screen">
-      {/* Section hero avec thème astronomique */}
+      {/* Section hero */}
       <section className="relative py-20 px-4">
         <div className="max-w-6xl mx-auto text-center">
-          
-          {/* Titre principal avec effet lumineux */}
+
+          {/* Titre principal */}
           <div className="relative mb-8">
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-4">
-              MOONLINE ART
+              {config?.site_name || 'MOONLINE ART'}
             </h1>
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent opacity-50 blur-sm">
-              MOONLINE ART
+            <div 
+              className="absolute inset-0 bg-clip-text text-transparent opacity-50 blur-sm"
+              style={{
+                backgroundImage: `linear-gradient(to right, ${config?.primary_color || '#a855f7'}, ${config?.secondary_color || '#3b82f6'}, ${config?.primary_color || '#a855f7'})`
+              }}
+            >
+              {config?.site_name || 'MOONLINE ART'}
             </div>
           </div>
 
           {/* Slogan */}
-          <p className="text-xl md:text-2xl text-purple-200 mb-8 font-light">
-            Des créations uniques entre art et style
+          <p 
+            className="text-xl md:text-2xl mb-8 font-light"
+            style={{ color: config?.accent_color || '#d8b4fe' }}
+          >
+            {config?.site_slogan || 'Des créations uniques entre art et style'}
           </p>
 
           {/* Description */}
           <p className="text-lg text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Plongez dans un univers artistique inspiré par les mystères du cosmos. 
-            Chaque œuvre est une invitation au voyage, entre rêverie et créativité, 
-            où l'art rencontre l'infini des étoiles.
+            {config?.home_hero_subtitle || 'Plongez dans un univers artistique inspiré par les mystères du cosmos. Chaque œuvre est une invitation au voyage, entre rêverie et créativité, où l\'art rencontre l\'infini des étoiles.'}
           </p>
 
           {/* Boutons d'action */}
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
-            <Link 
+            <Link
               to="/boutique"
-              className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
+              className="group text-white px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
+              style={{
+                background: `linear-gradient(to right, ${config?.primary_color || '#9333ea'}, ${config?.secondary_color || '#2563eb'})`
+              }}
             >
               <span className="flex items-center gap-2">
                 <Palette size={20} />
@@ -48,10 +55,14 @@ const Accueil: React.FC = () => {
                 <Sparkles size={16} className="group-hover:animate-pulse" />
               </span>
             </Link>
-            
-            <Link 
+
+            <Link
               to="/commande-personnalisee"
-              className="group border-2 border-purple-400 text-purple-300 hover:bg-purple-400 hover:text-white px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105"
+              className="group border-2 px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105"
+              style={{
+                borderColor: config?.accent_color || '#a855f7',
+                color: config?.accent_color || '#d8b4fe'
+              }}
             >
               <span className="flex items-center gap-2">
                 <Star size={20} />
@@ -66,39 +77,54 @@ const Accueil: React.FC = () => {
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-3 gap-8">
-            
+
             {/* Créations uniques */}
             <div className="text-center p-6 bg-slate-800/50 rounded-xl border border-purple-500/20 backdrop-blur-sm">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div 
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{
+                  background: `linear-gradient(to bottom right, ${config?.primary_color || '#a855f7'}, ${config?.secondary_color || '#3b82f6'})`
+                }}
+              >
                 <Palette className="text-white" size={24} />
               </div>
               <h3 className="text-xl font-semibold text-white mb-3">Créations Uniques</h3>
               <p className="text-gray-300">
-                Chaque œuvre est créée avec passion et attention aux détails, 
+                Chaque œuvre est créée avec passion et attention aux détails,
                 garantissant une pièce unique qui vous ressemble.
               </p>
             </div>
 
             {/* Commandes personnalisées */}
             <div className="text-center p-6 bg-slate-800/50 rounded-xl border border-purple-500/20 backdrop-blur-sm">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div 
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{
+                  background: `linear-gradient(to bottom right, ${config?.secondary_color || '#3b82f6'}, ${config?.primary_color || '#a855f7'})`
+                }}
+              >
                 <Star className="text-white" size={24} />
               </div>
               <h3 className="text-xl font-semibold text-white mb-3">Sur Mesure</h3>
               <p className="text-gray-300">
-                Donnez vie à vos idées avec nos commandes personnalisées. 
+                Donnez vie à vos idées avec nos commandes personnalisées.
                 Toiles, vêtements, accessoires... tout est possible !
               </p>
             </div>
 
             {/* Qualité artistique */}
             <div className="text-center p-6 bg-slate-800/50 rounded-xl border border-purple-500/20 backdrop-blur-sm">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div 
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{
+                  background: `linear-gradient(to bottom right, ${config?.primary_color || '#a855f7'}, ${config?.accent_color || '#f59e0b'})`
+                }}
+              >
                 <Sparkles className="text-white" size={24} />
               </div>
               <h3 className="text-xl font-semibold text-white mb-3">Qualité Premium</h3>
               <p className="text-gray-300">
-                Matériaux de qualité, techniques éprouvées et finitions soignées 
+                Matériaux de qualité, techniques éprouvées et finitions soignées
                 pour des œuvres qui traversent le temps.
               </p>
             </div>
@@ -107,17 +133,28 @@ const Accueil: React.FC = () => {
       </section>
 
       {/* Section appel à l'action */}
-      <section className="py-16 px-4 bg-gradient-to-r from-purple-900/50 to-blue-900/50">
+      <section 
+        className="py-16 px-4"
+        style={{
+          background: `linear-gradient(to right, ${config?.primary_color || '#581c87'}40, ${config?.secondary_color || '#1e3a8a'}40)`
+        }}
+      >
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Prêt à explorer l'univers MOONLINE ART ?
+            Prêt à explorer l'univers {config?.site_name || 'MOONLINE ART'} ?
           </h2>
-          <p className="text-xl text-purple-200 mb-8">
+          <p 
+            className="text-xl mb-8"
+            style={{ color: config?.accent_color || '#d8b4fe' }}
+          >
             Laissez-vous porter par la magie de nos créations
           </p>
-          <Link 
+          <Link
             to="/a-propos"
-            className="inline-block bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
+            className="inline-block text-white px-8 py-4 rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
+            style={{
+              background: `linear-gradient(to right, ${config?.primary_color || '#9333ea'}, ${config?.secondary_color || '#2563eb'})`
+            }}
           >
             En savoir plus sur l'artiste
           </Link>

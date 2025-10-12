@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabaseClient'
 
 export interface SiteConfig {
-  // Theme
+  // Couleurs existantes
   primary_color: string
   secondary_color: string
   accent_color: string
@@ -11,13 +11,13 @@ export interface SiteConfig {
   header_bg_color: string
   footer_bg_color: string
   
-  // Content
+  // Contenu textuel
   site_name: string
   site_slogan: string
-  about_title: string
-  about_description: string
   home_hero_title: string
   home_hero_subtitle: string
+  about_title: string
+  about_description: string
   
   // Contact
   contact_email: string
@@ -27,20 +27,55 @@ export interface SiteConfig {
   instagram_url: string
   twitter_url: string
   
-  // Settings
+  // Paramètres
   shipping_cost: number
   free_shipping_threshold: number
   order_processing_days: number
   custom_order_delay_days: number
   show_prices: boolean
   allow_custom_orders: boolean
+  
+  // ✨ NOUVEAUX PARAMÈTRES VISUELS
+  // Animations de fond
+  enable_particles: boolean
+  particles_color: string
+  particles_count: number
+  enable_stars: boolean
+  stars_color: string
+  stars_count: number
+  
+  // Images de fond
+  hero_background_image: string
+  hero_background_overlay_opacity: number
+  about_background_image: string
+  boutique_background_image: string
+  
+  // Effets visuels
+  enable_blur_effects: boolean
+  enable_gradient_backgrounds: boolean
+  gradient_start_color: string
+  gradient_end_color: string
+  
+  // Logos et icônes
+  logo_url: string
+  favicon_url: string
+  hero_icon_url: string
+  
+  // Typographie
+  font_family: string
+  heading_font_family: string
+  base_font_size: number
+  
+  // Espacements et bordures
+  border_radius: string
+  section_spacing: string
+  card_shadow: string
 }
 
 interface ConfigStore {
   config: SiteConfig | null
   loading: boolean
   error: string | null
-  
   loadConfig: () => Promise<void>
   updateConfig: (key: keyof SiteConfig, value: any) => Promise<boolean>
   updateMultipleConfig: (updates: Partial<SiteConfig>) => Promise<boolean>
@@ -50,31 +85,61 @@ const defaultConfig: SiteConfig = {
   primary_color: '#3b82f6',
   secondary_color: '#8b5cf6',
   accent_color: '#f59e0b',
-  background_color: '#ffffff',
-  text_color: '#1f2937',
-  header_bg_color: '#1e40af',
-  footer_bg_color: '#1f2937',
+  background_color: '#0f172a',
+  text_color: '#ffffff',
+  header_bg_color: '#1e293b',
+  footer_bg_color: '#0f172a',
   
-  site_name: 'Moonline Art',
-  site_slogan: 'Créations marines uniques et personnalisées',
-  about_title: 'À propos de nous',
-  about_description: 'Bienvenue dans notre boutique dédiée à l\'art marin...',
-  home_hero_title: 'Découvrez nos créations marines',
-  home_hero_subtitle: 'Des œuvres uniques inspirées de l\'océan',
+  site_name: 'MOONLINE ART',
+  site_slogan: 'Des créations uniques entre art et style',
+  home_hero_title: 'Bienvenue dans l\'univers MOONLINE',
+  home_hero_subtitle: 'Découvrez notre collection unique d\'art spatial',
+  about_title: 'Notre histoire',
+  about_description: 'MOONLINE ART est né d\'une passion pour l\'art et l\'univers...',
   
-  contact_email: 'contact@moonline-art.com',
-  contact_phone: '+33 6 12 34 56 78',
-  contact_address: '123 Rue de la Marine, 75000 Paris',
+  contact_email: 'contact@moonlineart.com',
+  contact_phone: '+33 1 23 45 67 89',
+  contact_address: '123 Rue des Étoiles, 75001 Paris, France',
   facebook_url: '',
   instagram_url: '',
   twitter_url: '',
   
-  shipping_cost: 5.90,
+  shipping_cost: 5.99,
   free_shipping_threshold: 50,
-  order_processing_days: 2,
+  order_processing_days: 3,
   custom_order_delay_days: 14,
   show_prices: true,
   allow_custom_orders: true,
+  
+  // Valeurs par défaut pour les nouveaux paramètres
+  enable_particles: true,
+  particles_color: '#a855f7',
+  particles_count: 50,
+  enable_stars: true,
+  stars_color: '#ffffff',
+  stars_count: 100,
+  
+  hero_background_image: '',
+  hero_background_overlay_opacity: 0.6,
+  about_background_image: '',
+  boutique_background_image: '',
+  
+  enable_blur_effects: true,
+  enable_gradient_backgrounds: true,
+  gradient_start_color: '#7c3aed',
+  gradient_end_color: '#2563eb',
+  
+  logo_url: '',
+  favicon_url: '',
+  hero_icon_url: '',
+  
+  font_family: 'Inter, system-ui, sans-serif',
+  heading_font_family: 'Inter, system-ui, sans-serif',
+  base_font_size: 16,
+  
+  border_radius: '0.75rem',
+  section_spacing: '4rem',
+  card_shadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
 }
 
 export const useConfigStore = create<ConfigStore>((set, get) => ({
@@ -88,109 +153,69 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('site_config')
-        .select('key, value')
-      
-      if (error) throw error
-      
-      // Convertir les résultats en objet config
-      const configObj: any = { ...defaultConfig }
-      
-      data?.forEach((item) => {
-        const key = item.key as keyof SiteConfig
-        let value = item.value
-        
-        // Parser les valeurs JSON si nécessaire
-        if (typeof value === 'string') {
-          try {
-            value = JSON.parse(value)
-          } catch {
-            // Si ce n'est pas du JSON valide, garder la valeur telle quelle
-          }
-        }
-        
-        configObj[key] = value
-      })
-      
-      set({ config: configObj, loading: false })
-    } catch (error: any) {
+        .select('*')
+        .single()
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = pas de données
+        throw error
+      }
+
+      if (data) {
+        set({ config: { ...defaultConfig, ...data }, loading: false })
+      } else {
+        // Créer la config par défaut si elle n'existe pas
+        const { data: newData, error: insertError } = await supabase
+          .from('site_config')
+          .insert([defaultConfig])
+          .select()
+          .single()
+
+        if (insertError) throw insertError
+        set({ config: newData, loading: false })
+      }
+    } catch (error) {
       console.error('Erreur chargement config:', error)
-      set({ 
-        error: error.message, 
-        loading: false,
-        config: defaultConfig 
-      })
+      set({ error: 'Erreur de chargement', loading: false, config: defaultConfig })
     }
   },
 
-  updateConfig: async (key: keyof SiteConfig, value: any) => {
+  updateConfig: async (key, value) => {
+    const currentConfig = get().config
+    if (!currentConfig) return false
+
     try {
-      // Déterminer la catégorie
-      let category = 'settings'
-      if (['primary_color', 'secondary_color', 'accent_color', 'background_color', 'text_color', 'header_bg_color', 'footer_bg_color'].includes(key)) {
-        category = 'theme'
-      } else if (['site_name', 'site_slogan', 'about_title', 'about_description', 'home_hero_title', 'home_hero_subtitle'].includes(key)) {
-        category = 'content'
-      } else if (['contact_email', 'contact_phone', 'contact_address', 'facebook_url', 'instagram_url', 'twitter_url'].includes(key)) {
-        category = 'contact'
-      }
-      
       const { error } = await supabase
         .from('site_config')
-        .upsert({
-          key,
-          value: JSON.stringify(value),
-          category
-        }, {
-          onConflict: 'key'
-        })
-      
+        .update({ [key]: value })
+        .eq('id', (currentConfig as any).id)
+
       if (error) throw error
-      
-      // Mettre à jour le state local
-      const currentConfig = get().config || defaultConfig
-      set({ 
-        config: { 
-          ...currentConfig, 
-          [key]: value 
-        } 
-      })
-      
+
+      set({ config: { ...currentConfig, [key]: value } })
       return true
     } catch (error) {
-      console.error('Erreur update config:', error)
+      console.error('Erreur mise à jour:', error)
       return false
     }
   },
 
-  updateMultipleConfig: async (updates: Partial<SiteConfig>) => {
+  updateMultipleConfig: async (updates) => {
+    const currentConfig = get().config
+    if (!currentConfig) return false
+
     try {
-      const promises = Object.entries(updates).map(([key, value]) => 
-        get().updateConfig(key as keyof SiteConfig, value)
-      )
-      
-      const results = await Promise.all(promises)
-      return results.every(r => r === true)
+      const { error } = await supabase
+        .from('site_config')
+        .update(updates)
+        .eq('id', (currentConfig as any).id)
+
+      if (error) throw error
+
+      set({ config: { ...currentConfig, ...updates } })
+      return true
     } catch (error) {
-      console.error('Erreur update multiple config:', error)
+      console.error('Erreur mise à jour multiple:', error)
       return false
     }
-  }
+  },
 }))
-
-// Hook personnalisé pour appliquer le thème
-export const useTheme = () => {
-  const config = useConfigStore(state => state.config)
-  
-  // Appliquer les couleurs au document
-  if (config && typeof document !== 'undefined') {
-    document.documentElement.style.setProperty('--color-primary', config.primary_color)
-    document.documentElement.style.setProperty('--color-secondary', config.secondary_color)
-    document.documentElement.style.setProperty('--color-accent', config.accent_color)
-    document.documentElement.style.setProperty('--color-background', config.background_color)
-    document.documentElement.style.setProperty('--color-text', config.text_color)
-    document.documentElement.style.setProperty('--color-header-bg', config.header_bg_color)
-    document.documentElement.style.setProperty('--color-footer-bg', config.footer_bg_color)
-  }
-  
-  return config
-}
