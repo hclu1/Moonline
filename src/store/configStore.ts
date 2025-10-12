@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabaseClient'
 
 export interface SiteConfig {
+  id?: string
   // Couleurs
   primary_color: string
   secondary_color: string
@@ -35,7 +36,7 @@ export interface SiteConfig {
   show_prices: boolean
   allow_custom_orders: boolean
   
-  // Animations
+  // Animations de fond
   enable_particles: boolean
   particles_color: string
   particles_count: number
@@ -55,7 +56,7 @@ export interface SiteConfig {
   gradient_start_color: string
   gradient_end_color: string
   
-  // Logos
+  // Logos et icones
   logo_url: string
   favicon_url: string
   hero_icon_url: string
@@ -71,22 +72,24 @@ export interface SiteConfig {
   card_shadow: string
 }
 
-interface ConfigHistory {
-  id: string
-  config_data: SiteConfig
-  label: string
-  created_at: string
-}
-
 interface ConfigStore {
   config: SiteConfig | null
-  configHistory: ConfigHistory[]
   loading: boolean
   error: string | null
+  configHistory: ConfigVersion[]
+  currentVersion: number | null
+  
   loadConfig: () => Promise<void>
-  updateMultipleConfig: (updates: Partial<SiteConfig>, label?: string) => Promise<boolean>
+  updateConfig: (updates: Partial<SiteConfig>, description?: string) => Promise<boolean>
   loadConfigHistory: () => Promise<void>
-  restoreVersion: (historyId: string) => Promise<boolean>
+  restoreVersion: (versionNumber: number) => Promise<boolean>
+}
+
+interface ConfigVersion {
+  id: string
+  version_number: number
+  created_at: string
+  description: string | null
 }
 
 const defaultConfig: SiteConfig = {
@@ -103,7 +106,7 @@ const defaultConfig: SiteConfig = {
   home_hero_title: 'Bienvenue dans l\'univers MOONLINE',
   home_hero_subtitle: 'Découvrez notre collection unique d\'art spatial',
   about_title: 'Notre histoire',
-  about_description: '',
+  about_description: 'MOONLINE ART est né d\'une passion pour l\'art et l\'univers.',
   
   contact_email: 'contact@moonlineart.com',
   contact_phone: '+33 1 23 45 67 89',
@@ -151,74 +154,55 @@ const defaultConfig: SiteConfig = {
 
 export const useConfigStore = create<ConfigStore>((set, get) => ({
   config: null,
-  configHistory: [],
   loading: false,
   error: null,
+  configHistory: [],
+  currentVersion: null,
 
   loadConfig: async () => {
     set({ loading: true, error: null })
     
     try {
+      // D'abord, essayer de charger depuis l'historique (dernière version)
+      const { data: historyData, error: historyError } = await supabase
+        .from('site_config_history')
+        .select('config_snapshot, version_number')
+        .order('version_number', { ascending: false })
+        .limit(1)
+        .single()
+      
+      if (!historyError && historyData) {
+        // Si on a une version dans l'historique, l'utiliser
+        const snapshot = historyData.config_snapshot as SiteConfig
+        set({ 
+          config: snapshot, 
+          loading: false,
+          currentVersion: historyData.version_number 
+        })
+        return
+      }
+      
+      // Sinon, charger depuis la table principale
       const { data, error } = await supabase
         .from('site_config')
         .select('*')
+        .limit(1)
         .single()
-
-      if (error && error.code !== 'PGRST116') {
-        throw error
+      
+      if (error) {
+        console.error('Erreur chargement config:', error)
+        set({ config: defaultConfig, loading: false })
+        return
       }
-
-      if (data) {
-        set({ config: { ...defaultConfig, ...data }, loading: false })
-      } else {
-        const { data: newData, error: insertError } = await supabase
-          .from('site_config')
-          .insert([defaultConfig])
-          .select()
-          .single()
-
-        if (insertError) throw insertError
-        set({ config: newData, loading: false })
-      }
-    } catch (error) {
+      
+      set({ config: data || defaultConfig, loading: false })
+    } catch (error: any) {
       console.error('Erreur chargement config:', error)
-      set({ error: 'Erreur de chargement', loading: false, config: defaultConfig })
-    }
-  },
-
-  updateMultipleConfig: async (updates, label = '') => {
-    const currentConfig = get().config
-    if (!currentConfig) return false
-
-    try {
-      // 1. Sauvegarder dans l'historique
-      if (label) {
-        await supabase
-          .from('site_config_history')
-          .insert([{
-            config_data: { ...currentConfig, ...updates },
-            label: label || `Modification ${new Date().toLocaleString()}`
-          }])
-      }
-
-      // 2. Mettre à jour la config actuelle
-      const { error } = await supabase
-        .from('site_config')
-        .update(updates)
-        .eq('id', (currentConfig as any).id)
-
-      if (error) throw error
-
-      // 3. Mettre à jour le state local
-      set({ config: { ...currentConfig, ...updates } })
-      
-      // 4. Recharger l'historique
-      get().loadConfigHistory()
-      
-      return true
-    } catch (error) {
-      console.error('Erreur mise à jour:', error)
-      return false
+      set({ 
+        error: error.message, 
+        loading: false,
+        config: defaultConfig 
+      })
     }
   },
 
@@ -226,10 +210,10 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('site_config_history')
-        .select('*')
-        .order('created_at', { ascending: false })
+        .select('id, version_number, created_at, description')
+        .order('version_number', { ascending: false })
         .limit(20)
-
+      
       if (error) throw error
       
       set({ configHistory: data || [] })
@@ -238,25 +222,119 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
     }
   },
 
-  restoreVersion: async (historyId: string) => {
+  updateConfig: async (updates: Partial<SiteConfig>, description?: string) => {
     try {
-      const { data: historyEntry, error: fetchError } = await supabase
-        .from('site_config_history')
-        .select('*')
-        .eq('id', historyId)
+      const currentConfig = get().config
+      if (!currentConfig?.id) {
+        // Si pas d'ID, on fait un INSERT
+        const { data, error } = await supabase
+          .from('site_config')
+          .insert({ ...defaultConfig, ...updates })
+          .select()
+          .single()
+        
+        if (error) throw error
+        
+        // Sauvegarder dans l'historique
+        await saveConfigToHistory(data, description)
+        
+        set({ config: data })
+        return true
+      }
+      
+      // Sinon UPDATE
+      const { data, error } = await supabase
+        .from('site_config')
+        .update(updates)
+        .eq('id', currentConfig.id)
+        .select()
         .single()
-
-      if (fetchError) throw fetchError
-
-      const success = await get().updateMultipleConfig(
-        historyEntry.config_data,
-        `Restauration: ${historyEntry.label}`
-      )
-
-      return success
+      
+      if (error) throw error
+      
+      // Sauvegarder dans l'historique
+      await saveConfigToHistory(data, description)
+      
+      set({ config: data })
+      
+      // Recharger l'historique
+      get().loadConfigHistory()
+      
+      return true
     } catch (error) {
-      console.error('Erreur restauration:', error)
+      console.error('Erreur update config:', error)
       return false
     }
   },
+
+  restoreVersion: async (versionNumber: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('site_config_history')
+        .select('config_snapshot')
+        .eq('version_number', versionNumber)
+        .single()
+      
+      if (error) throw error
+      
+      const snapshot = data.config_snapshot as SiteConfig
+      
+      const currentConfig = get().config
+      if (!currentConfig?.id) return false
+      
+      const { data: updated, error: updateError } = await supabase
+        .from('site_config')
+        .update(snapshot)
+        .eq('id', currentConfig.id)
+        .select()
+        .single()
+      
+      if (updateError) throw updateError
+      
+      set({ config: updated })
+      
+      return true
+    } catch (error) {
+      console.error('Erreur restore version:', error)
+      return false
+    }
+  }
 }))
+
+// Fonction helper pour sauvegarder dans l'historique
+async function saveConfigToHistory(config: SiteConfig, description?: string) {
+  try {
+    const { data: versionData } = await supabase
+      .rpc('get_next_config_version')
+    
+    const nextVersion = versionData || 1
+    
+    await supabase
+      .from('site_config_history')
+      .insert({
+        config_snapshot: config,
+        version_number: nextVersion,
+        description: description || `Configuration v${nextVersion}`
+      })
+  } catch (error) {
+    console.error('Erreur sauvegarde historique:', error)
+  }
+}
+
+// Hook personnalisé pour appliquer le thème
+export const useTheme = () => {
+  const config = useConfigStore(state => state.config)
+  
+  // Appliquer les couleurs au document
+  if (config && typeof document !== 'undefined') {
+    document.documentElement.style.setProperty('--color-primary', config.primary_color)
+    document.documentElement.style.setProperty('--color-secondary', config.secondary_color)
+    document.documentElement.style.setProperty('--color-accent', config.accent_color)
+    document.documentElement.style.setProperty('--color-background', config.background_color)
+    document.documentElement.style.setProperty('--color-text', config.text_color)
+    document.documentElement.style.setProperty('--color-header-bg', config.header_bg_color)
+    document.documentElement.style.setProperty('--color-footer-bg', config.footer_bg_color)
+  }
+  
+  return config
+}
