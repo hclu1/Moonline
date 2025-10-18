@@ -228,7 +228,7 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
     }
   },
 
-  // Charger la configuration
+    // Charger la configuration
   loadConfig: async () => {
     set({ loading: true, error: null })
     
@@ -270,9 +270,33 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
       
       if (error) throw error
       
-      // Si aucune config n'existe, l'initialiser
+      // ✅ SI AUCUNE CONFIG, CRÉER ET STOPPER LE LOADING
       if (!data) {
-        await get().initializeConfig()
+        console.log('⚠️ Aucune config trouvée, création automatique...')
+        
+        const newConfig = {
+          ...defaultConfig,
+          user_id: currentUser.id
+        }
+        
+        const { data: created, error: createError } = await supabase
+          .from('site_config')
+          .insert(newConfig)
+          .select()
+          .single()
+        
+        if (createError) {
+          console.error('Erreur création config:', createError)
+          set({ config: defaultConfig as SiteConfig, loading: false })
+          return
+        }
+        
+        console.log('✅ Config créée avec succès!')
+        
+        // Sauvegarder dans l'historique
+        await saveConfigToHistory(created, 'Configuration initiale')
+        
+        set({ config: created, loading: false })
         return
       }
       
@@ -289,6 +313,7 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
       })
     }
   },
+
 
   // Charger l'historique des versions
   loadConfigHistory: async () => {
