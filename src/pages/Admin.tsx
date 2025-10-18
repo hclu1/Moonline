@@ -131,6 +131,21 @@ const Admin: React.FC = () => {
     }
   }, [config])
 
+    useEffect(() => {
+    if (config) {
+      setLocalConfig(config)
+    }
+  }, [config])
+
+  console.log('🔍 Admin Debug:', {
+    authLoading,
+    loading,
+    isAdmin,
+    currentUser: currentUser?.email,
+    configExists: !!config,
+  })
+
+
   const handleConfigChange = (key: keyof SiteConfig, value: any) => {
     setLocalConfig(prev => ({ ...prev, [key]: value }))
   }
