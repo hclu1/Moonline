@@ -99,16 +99,25 @@ const Admin: React.FC = () => {
     }
   ])
 
-  // Vérifier l'authentification au montage
+    // Vérifier l'authentification au montage
   useEffect(() => {
     const initAuth = async () => {
       setAuthLoading(true)
       await checkAuth()
+      
+      // ✅ AJOUTEZ CE CODE ICI
+      const { isAdmin: adminStatus, currentUser: user } = useConfigStore.getState()
+      
+      if (adminStatus && user) {
+        await loadConfig()
+      }
+      
       setAuthLoading(false)
     }
     
     initAuth()
   }, [checkAuth])
+
 
   // Rediriger si non authentifié
   useEffect(() => {
@@ -119,11 +128,7 @@ const Admin: React.FC = () => {
   }, [isAdmin, currentUser, navigate, authLoading])
 
   // Charger la config
-  useEffect(() => {
-    if (isAdmin && currentUser) {
-      loadConfig()
-    }
-  }, [loadConfig, isAdmin, currentUser])
+  
 
   useEffect(() => {
     if (config) {
