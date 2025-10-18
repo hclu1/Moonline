@@ -31,7 +31,7 @@ const Admin: React.FC = () => {
   const [modaleProduit, setModaleProduit] = useState<{ ouvert: boolean; produit?: Produit }>({ ouvert: false })
   
   // Configuration
-  const { config, loading, loadConfig, updateMultipleConfig } = useConfigStore()
+  const { config, loading, loadConfig, updateConfig } = useConfigStore()
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('theme')
   const [localConfig, setLocalConfig] = useState<Partial<SiteConfig>>({})
   const [saving, setSaving] = useState(false)
@@ -51,16 +51,16 @@ const Admin: React.FC = () => {
   }
 
   const handleSaveConfig = async () => {
-    setSaving(true)
-    const success = await updateMultipleConfig(localConfig)
-    setSaving(false)
-    
-    if (success) {
-      toast.success('Configuration enregistrée avec succès !')
-    } else {
-      toast.error('Erreur lors de l\'enregistrement')
-    }
+  setSaving(true)
+  const success = await updateConfig(localConfig, `Configuration ${new Date().toLocaleString()}`)
+  setSaving(false)
+  
+  if (success) {
+    toast.success('Configuration enregistrée avec succès !')
+  } else {
+    toast.error('Erreur lors de l\'enregistrement')
   }
+}
 
   const [produits] = useState<Produit[]>([
     {

@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabaseClient'
 
 export interface SiteConfig {
   id?: string
+  user_id?: string // Ajout de user_id
+  
   // Couleurs
   primary_color: string
   secondary_color: string
@@ -78,11 +80,15 @@ interface ConfigStore {
   error: string | null
   configHistory: ConfigVersion[]
   currentVersion: number | null
+  isAdmin: boolean
+  currentUser: any | null
   
   loadConfig: () => Promise<void>
   updateConfig: (updates: Partial<SiteConfig>, description?: string) => Promise<boolean>
   loadConfigHistory: () => Promise<void>
   restoreVersion: (versionNumber: number) => Promise<boolean>
+  checkAuth: () => Promise<void>
+  initializeConfig: () => Promise<void>
 }
 
 interface ConfigVersion {
@@ -90,9 +96,10 @@ interface ConfigVersion {
   version_number: number
   created_at: string
   description: string | null
+  user_id: string
 }
 
-const defaultConfig: SiteConfig = {
+const defaultConfig: Omit<SiteConfig, 'id' | 'user_id'> = {
   primary_color: '#3b82f6',
   secondary_color: '#8b5cf6',
   accent_color: '#f59e0b',
@@ -158,57 +165,144 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
   error: null,
   configHistory: [],
   currentVersion: null,
+  isAdmin: false,
+  currentUser: null,
 
+  // Vérifier l'authentification de l'utilisateur
+  checkAuth: async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser()
+      
+      if (error || !user) {
+        set({ isAdmin: false, currentUser: null })
+        return
+      }
+
+      set({ currentUser: user, isAdmin: true })
+    } catch (error) {
+      console.error('Erreur vérification auth:', error)
+      set({ isAdmin: false, currentUser: null })
+    }
+  },
+
+  // Initialiser la configuration (créer si n'existe pas)
+  initializeConfig: async () => {
+    const { currentUser } = get()
+    
+    if (!currentUser) {
+      console.error('Utilisateur non authentifié')
+      return
+    }
+
+    try {
+      // Vérifier si une config existe déjà pour cet utilisateur
+      const { data: existingConfig } = await supabase
+        .from('site_config')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .single()
+
+      if (existingConfig) {
+        set({ config: existingConfig })
+        return
+      }
+
+      // Créer une nouvelle configuration
+      const { data: newConfig, error } = await supabase
+        .from('site_config')
+        .insert({
+          ...defaultConfig,
+          user_id: currentUser.id
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Sauvegarder dans l'historique
+      await saveConfigToHistory(newConfig, 'Configuration initiale')
+
+      set({ config: newConfig })
+    } catch (error) {
+      console.error('Erreur initialisation config:', error)
+    }
+  },
+
+  // Charger la configuration
   loadConfig: async () => {
     set({ loading: true, error: null })
     
     try {
-      // D'abord, essayer de charger depuis l'historique (dernière version)
-      const { data: historyData, error: historyError } = await supabase
-        .from('site_config_history')
-        .select('config_snapshot, version_number')
-        .order('version_number', { ascending: false })
-        .limit(1)
+      // Vérifier l'authentification d'abord
+      await get().checkAuth()
       
-      if (!historyError && historyData && historyData.length > 0) {
-        // Si on a une version dans l'historique, l'utiliser
-        const snapshot = historyData[0].config_snapshot as SiteConfig
-        set({ 
-          config: snapshot, 
-          loading: false,
-          currentVersion: historyData[0].version_number 
-        })
+      const { currentUser } = get()
+      
+      // Si pas d'utilisateur authentifié, charger config publique (dernière version)
+      if (!currentUser) {
+        const { data: historyData } = await supabase
+          .from('site_config_history')
+          .select('config_snapshot, version_number')
+          .order('version_number', { ascending: false })
+          .limit(1)
+        
+        if (historyData && historyData.length > 0) {
+          const snapshot = historyData[0].config_snapshot as SiteConfig
+          set({ 
+            config: snapshot, 
+            loading: false,
+            currentVersion: historyData[0].version_number 
+          })
+          return
+        }
+        
+        // Fallback sur la config par défaut
+        set({ config: defaultConfig as SiteConfig, loading: false })
         return
       }
       
-      // Sinon, charger depuis la table principale
+      // Charger la configuration de l'utilisateur admin
       const { data, error } = await supabase
         .from('site_config')
         .select('*')
-        .limit(1)
+        .eq('user_id', currentUser.id)
+        .single()
       
-      if (error || !data || data.length === 0) {
-        console.error('Erreur chargement config:', error)
-        set({ config: defaultConfig, loading: false })
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Pas de config trouvée, initialiser
+          await get().initializeConfig()
+        } else {
+          throw error
+        }
         return
       }
       
-      set({ config: data[0] || defaultConfig, loading: false })
+      set({ config: data, loading: false })
+      
+      // Charger l'historique
+      await get().loadConfigHistory()
     } catch (error: any) {
       console.error('Erreur chargement config:', error)
       set({ 
         error: error.message, 
         loading: false,
-        config: defaultConfig 
+        config: defaultConfig as SiteConfig
       })
     }
   },
 
+  // Charger l'historique des versions
   loadConfigHistory: async () => {
+    const { currentUser } = get()
+    
+    if (!currentUser) return
+
     try {
       const { data, error } = await supabase
         .from('site_config_history')
-        .select('id, version_number, created_at, description')
+        .select('id, version_number, created_at, description, user_id')
+        .eq('user_id', currentUser.id)
         .order('version_number', { ascending: false })
         .limit(20)
       
@@ -220,31 +314,40 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
     }
   },
 
+  // Mettre à jour la configuration
   updateConfig: async (updates: Partial<SiteConfig>, description?: string) => {
+    const { currentUser, isAdmin, config: currentConfig } = get()
+    
+    // Vérifier que l'utilisateur est admin
+    if (!currentUser || !isAdmin) {
+      console.error('Accès refusé: utilisateur non authentifié ou non admin')
+      set({ error: 'Accès refusé' })
+      return false
+    }
+
     try {
-      const currentConfig = get().config
+      // Si pas de config existante, initialiser d'abord
       if (!currentConfig?.id) {
-        // Si pas d'ID, on fait un INSERT
-        const { data, error } = await supabase
-          .from('site_config')
-          .insert({ ...defaultConfig, ...updates })
-          .select()
-          .single()
+        await get().initializeConfig()
+        const { config: newConfig } = get()
         
-        if (error) throw error
-        
-        // Sauvegarder dans l'historique
-        await saveConfigToHistory(data, description)
-        
-        set({ config: data })
-        return true
+        if (!newConfig?.id) {
+          throw new Error('Impossible de créer la configuration')
+        }
       }
-      
-      // Sinon UPDATE
+
+      const configToUpdate = get().config
+
+      if (!configToUpdate?.id) {
+        throw new Error('Configuration introuvable')
+      }
+
+      // Mettre à jour la configuration
       const { data, error } = await supabase
         .from('site_config')
         .update(updates)
-        .eq('id', currentConfig.id)
+        .eq('id', configToUpdate.id)
+        .eq('user_id', currentUser.id)
         .select()
         .single()
       
@@ -256,40 +359,56 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
       set({ config: data })
       
       // Recharger l'historique
-      get().loadConfigHistory()
+      await get().loadConfigHistory()
       
       return true
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur update config:', error)
+      set({ error: error.message })
       return false
     }
   },
 
+  // Restaurer une version précédente
   restoreVersion: async (versionNumber: number) => {
+    const { currentUser, isAdmin, config: currentConfig } = get()
+    
+    if (!currentUser || !isAdmin) {
+      console.error('Accès refusé')
+      return false
+    }
+
     try {
       const { data, error } = await supabase
         .from('site_config_history')
         .select('config_snapshot')
         .eq('version_number', versionNumber)
+        .eq('user_id', currentUser.id)
         .single()
       
       if (error) throw error
       
       const snapshot = data.config_snapshot as SiteConfig
       
-      const currentConfig = get().config
       if (!currentConfig?.id) return false
       
       const { data: updated, error: updateError } = await supabase
         .from('site_config')
         .update(snapshot)
         .eq('id', currentConfig.id)
+        .eq('user_id', currentUser.id)
         .select()
         .single()
       
       if (updateError) throw updateError
       
+      // Sauvegarder la restauration dans l'historique
+      await saveConfigToHistory(updated, `Restauration de la version ${versionNumber}`)
+      
       set({ config: updated })
+      
+      // Recharger l'historique
+      await get().loadConfigHistory()
       
       return true
     } catch (error) {
@@ -301,19 +420,34 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
 
 // Fonction helper pour sauvegarder dans l'historique
 async function saveConfigToHistory(config: SiteConfig, description?: string) {
+  if (!config.user_id) {
+    console.error('user_id manquant dans la config')
+    return
+  }
+
   try {
-    const { data: versionData } = await supabase
-      .rpc('get_next_config_version')
+    // Obtenir le prochain numéro de version pour cet utilisateur
+    const { data: maxVersionData } = await supabase
+      .from('site_config_history')
+      .select('version_number')
+      .eq('user_id', config.user_id)
+      .order('version_number', { ascending: false })
+      .limit(1)
     
-    const nextVersion = versionData || 1
+    const nextVersion = maxVersionData && maxVersionData.length > 0 
+      ? maxVersionData[0].version_number + 1 
+      : 1
     
-    await supabase
+    const { error } = await supabase
       .from('site_config_history')
       .insert({
         config_snapshot: config,
         version_number: nextVersion,
-        description: description || `Configuration v${nextVersion}`
+        description: description || `Configuration v${nextVersion}`,
+        user_id: config.user_id
       })
+
+    if (error) throw error
   } catch (error) {
     console.error('Erreur sauvegarde historique:', error)
   }

@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useEffect } from 'react'
 import { useConfigStore } from './store/configStore'
+import { supabase } from './lib/supabaseClient'
 
 import Navigation from './components/Navigation'
 import Accueil from './pages/Accueil'
@@ -14,12 +15,44 @@ import Admin from './pages/Admin'
 import ConditionsVente from './pages/ConditionsVente'
 
 function App() {
-  const { loadConfig, config } = useConfigStore()
+  const { loadConfig, checkAuth, config } = useConfigStore()
   
-  // Charger la configuration au démarrage
+  // Initialiser l'authentification et charger la configuration au démarrage
   useEffect(() => {
-    loadConfig()
-  }, [loadConfig])
+    const initializeApp = async () => {
+      // Vérifier l'authentification
+      await checkAuth()
+      // Charger la configuration
+      await loadConfig()
+    }
+    
+    initializeApp()
+    
+    // Écouter les changements d'authentification
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email)
+        
+        // Vérifier l'authentification à chaque changement
+        await checkAuth()
+        
+        // Recharger la configuration après authentification
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          await loadConfig()
+        }
+        
+        // Réinitialiser en cas de déconnexion
+        if (event === 'SIGNED_OUT') {
+          await loadConfig()
+        }
+      }
+    )
+    
+    // Nettoyer l'écouteur au démontage du composant
+    return () => {
+      authListener?.subscription.unsubscribe()
+    }
+  }, [checkAuth, loadConfig])
 
   // Appliquer le thème au document
   useEffect(() => {
@@ -35,8 +68,16 @@ function App() {
   }, [config])
 
   return (
-    <Router>
-      <div className="min-h-screen" style={{ backgroundColor: config?.background_color || '#0f172a' }}>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <div 
+        className="min-h-screen" 
+        style={{ backgroundColor: config?.background_color || '#0f172a' }}
+      >
         <Navigation />
         <Routes>
           <Route path="/" element={<Accueil />} />

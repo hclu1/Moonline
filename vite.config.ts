@@ -1,47 +1,42 @@
-
 import type { UserConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import { defineConfig } from 'vite'
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  let build: UserConfig['build'], esbuild: UserConfig['esbuild'], define: UserConfig['define']
-
-  if (mode === 'development') {
-    build = {
-      minify: false,
+  const isDev = mode === 'development'
+  
+  return {
+    plugins: [react()],
+    
+    build: {
+      minify: isDev ? false : 'esbuild',
       rollupOptions: {
         output: {
+          format: 'es',
           manualChunks: undefined,
         },
       },
-    }
-
-    esbuild = {
-      jsxDev: true,
-      keepNames: true,
-      minifyIdentifiers: false,
-    }
-
-    define = {
-      'process.env.NODE_ENV': '"development"',
-      '__DEV__': 'true',
-    }
-  }
-
-  return {
-    plugins: [react()],
-    build,
-    esbuild,
-    define,
+    },
+    
+    esbuild: {
+      keepNames: isDev,
+      minifyIdentifiers: !isDev,
+      minifySyntax: !isDev,
+    },
+    
+    define: {
+      'process.env.NODE_ENV': JSON.stringify(mode),
+      '__DEV__': JSON.stringify(isDev),
+    },
+    
     resolve: {
       alias: {
         '@': '/src',
       }
     },
+    
     optimizeDeps: {
       exclude: ['lucide-react'],
     },
   }
 })
-
