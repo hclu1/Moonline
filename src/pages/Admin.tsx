@@ -99,13 +99,13 @@ const Admin: React.FC = () => {
     }
   ])
 
-    // Vérifier l'authentification au montage
+     // Vérifier l'authentification au montage
   useEffect(() => {
     const initAuth = async () => {
       setAuthLoading(true)
       await checkAuth()
       
-      // ✅ AJOUTEZ CE CODE ICI
+      // Récupérer le state frais après checkAuth
       const { isAdmin: adminStatus, currentUser: user } = useConfigStore.getState()
       
       if (adminStatus && user) {
@@ -116,8 +116,7 @@ const Admin: React.FC = () => {
     }
     
     initAuth()
-  }, [checkAuth])
-
+  }, [checkAuth, loadConfig])
 
   // Rediriger si non authentifié
   useEffect(() => {
@@ -127,21 +126,14 @@ const Admin: React.FC = () => {
     }
   }, [isAdmin, currentUser, navigate, authLoading])
 
-  // Charger la config
-  
-
+  // Synchroniser localConfig avec config (UNE SEULE FOIS)
   useEffect(() => {
     if (config) {
       setLocalConfig(config)
     }
   }, [config])
 
-    useEffect(() => {
-    if (config) {
-      setLocalConfig(config)
-    }
-  }, [config])
-
+  // Debug logs
   console.log('🔍 Admin Debug:', {
     authLoading,
     loading,
@@ -149,7 +141,6 @@ const Admin: React.FC = () => {
     currentUser: currentUser?.email,
     configExists: !!config,
   })
-
 
   const handleConfigChange = (key: keyof SiteConfig, value: any) => {
     setLocalConfig(prev => ({ ...prev, [key]: value }))
