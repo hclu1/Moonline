@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import {Package, ShoppingCart, Users, TrendingUp, Plus, Edit, Trash2, Eye, Settings, Save, Palette, FileText, Mail, Sparkles, Image as ImageIcon} from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import {Package, ShoppingCart, Users, TrendingUp, Settings, Save, Palette, FileText, Mail, Sparkles, Image as ImageIcon, LogOut} from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useConfigStore, SiteConfig } from '../store/configStore'
 import { supabase } from '../lib/supabaseClient'
@@ -27,18 +28,43 @@ interface Commande {
 type ConfigTab = 'theme' | 'content' | 'contact' | 'settings' | 'visual' | 'advanced'
 
 const Admin: React.FC = () => {
+  const navigate = useNavigate()
+  const { config, loading, loadConfig, updateConfig, isAdmin, currentUser, checkAuth } = useConfigStore()
+  
   const [ongletActif, setOngletActif] = useState<'dashboard' | 'produits' | 'commandes' | 'clients' | 'configuration'>('dashboard')
   const [modaleProduit, setModaleProduit] = useState<{ ouvert: boolean; produit?: Produit }>({ ouvert: false })
   
   // Configuration
-  const { config, loading, loadConfig, updateConfig } = useConfigStore()
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('theme')
   const [localConfig, setLocalConfig] = useState<Partial<SiteConfig>>({})
   const [saving, setSaving] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
 
+  // Vérifier l'authentification au montage
   useEffect(() => {
-    loadConfig()
-  }, [loadConfig])
+    const initAuth = async () => {
+      setAuthLoading(true)
+      await checkAuth()
+      setAuthLoading(false)
+    }
+    
+    initAuth()
+  }, [checkAuth])
+
+  // Rediriger si non authentifié
+  useEffect(() => {
+    if (!authLoading && (!isAdmin || !currentUser)) {
+      toast.error('Vous devez être connecté en tant qu\'admin')
+      navigate('/login')
+    }
+  }, [isAdmin, currentUser, navigate, authLoading])
+
+  // Charger la config
+  useEffect(() => {
+    if (isAdmin && currentUser) {
+      loadConfig()
+    }
+  }, [loadConfig, isAdmin, currentUser])
 
   useEffect(() => {
     if (config) {
@@ -51,16 +77,44 @@ const Admin: React.FC = () => {
   }
 
   const handleSaveConfig = async () => {
-  setSaving(true)
-  const success = await updateConfig(localConfig, `Configuration ${new Date().toLocaleString()}`)
-  setSaving(false)
-  
-  if (success) {
-    toast.success('Configuration enregistrée avec succès !')
-  } else {
-    toast.error('Erreur lors de l\'enregistrement')
+    setSaving(true)
+    const success = await updateConfig(localConfig, `Configuration ${new Date().toLocaleString()}`)
+    setSaving(false)
+    
+    if (success) {
+      toast.success('Configuration enregistrée avec succès !')
+    } else {
+      toast.error('Erreur lors de l\'enregistrement')
+    }
   }
-}
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      toast.success('Déconnexion réussie')
+      navigate('/login')
+    } catch (error) {
+      console.error('Erreur déconnexion:', error)
+      toast.error('Erreur lors de la déconnexion')
+    }
+  }
+
+  // État de chargement
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-white">Chargement...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Ne pas afficher le contenu si pas admin
+  if (!isAdmin || !currentUser) {
+    return null
+  }
 
   const [produits] = useState<Produit[]>([
     {
@@ -171,9 +225,20 @@ const Admin: React.FC = () => {
   return (
     <div className="min-h-screen pt-16">
       <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 backdrop-blur-sm py-6 sm:py-8 border-b border-purple-500/20">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Administration MOONLINE ART</h1>
-          <p className="text-sm sm:text-base text-gray-300">Gestion de votre boutique en ligne</p>
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Administration MOONLINE ART</h1>
+            <p className="text-sm sm:text-base text-gray-300">
+              Connecté: <span className="text-purple-400 font-semibold">{currentUser?.email}</span>
+            </p>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition"
+          >
+            <LogOut size={18} />
+            <span className="hidden sm:inline">Déconnexion</span>
+          </button>
         </div>
       </div>
 
@@ -547,12 +612,12 @@ const Admin: React.FC = () => {
                       }}
                     >
                       <h4 
-                        className="text-2xl font-bold mb-2"
+                        className="text-2xl font-bold mb-2 text-white"
                         style={{ fontFamily: localConfig.heading_font_family }}
                       >
                         Exemple de titre
                       </h4>
-                      <p style={{ fontSize: `${localConfig.base_font_size}px` }}>
+                      <p className="text-gray-300" style={{ fontSize: `${localConfig.base_font_size}px` }}>
                         Voici un exemple de texte avec votre typographie personnalisée.
                       </p>
                     </div>
@@ -586,7 +651,7 @@ const Admin: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+                <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border-purple-500/20">
                   <h3 className="text-xl font-semibold text-white mb-4">Réseaux sociaux</h3>
                   <div className="space-y-4">
                     <TextInput label="Facebook (URL complète)" value={localConfig.facebook_url || ''} onChange={(v) => handleConfigChange('facebook_url', v)} placeholder="https://facebook.com/votre-page" />

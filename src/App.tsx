@@ -13,6 +13,32 @@ import CommandePersonnalisee from './pages/CommandePersonnalisee'
 import Panier from './pages/Panier'
 import Admin from './pages/Admin'
 import ConditionsVente from './pages/ConditionsVente'
+import Login from './pages/Login'
+
+function App() {
+  // ... votre code existant
+
+  return (
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <div className="min-h-screen" style={{ backgroundColor: config?.background_color || '#0f172a' }}>
+        <Navigation />
+        <Routes>
+          <Route path="/" element={<Accueil />} />
+          <Route path="/boutique" element={<Boutique />} />
+          <Route path="/a-propos" element={<APropos />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/commande-personnalisee" element={<CommandePersonnalisee />} />
+          <Route path="/panier" element={<Panier />} />
+          <Route path="/login" element={<Login />} />  {/* NOUVELLE ROUTE */}
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/conditions-vente" element={<ConditionsVente />} />
+        </Routes>
+        <Toaster position="top-right" toastOptions={{ duration: 3000, style: { background: '#363636', color: '#fff' } }} />
+      </div>
+    </Router>
+  )
+}
+
 
 function App() {
   const { loadConfig, checkAuth, config } = useConfigStore()
