@@ -31,14 +31,74 @@ const Admin: React.FC = () => {
   const navigate = useNavigate()
   const { config, loading, loadConfig, updateConfig, isAdmin, currentUser, checkAuth } = useConfigStore()
   
+  // ✅ TOUS LES HOOKS EN PREMIER (avant toute condition)
   const [ongletActif, setOngletActif] = useState<'dashboard' | 'produits' | 'commandes' | 'clients' | 'configuration'>('dashboard')
   const [modaleProduit, setModaleProduit] = useState<{ ouvert: boolean; produit?: Produit }>({ ouvert: false })
-  
-  // Configuration
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('theme')
   const [localConfig, setLocalConfig] = useState<Partial<SiteConfig>>({})
   const [saving, setSaving] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
+
+  // Tous les données statiques
+  const [produits] = useState<Produit[]>([
+    {
+      id: '1',
+      nom: 'Tableau "Nébuleuse d\'Orion"',
+      prix: 89.99,
+      image: 'https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?w=400',
+      categorie: 'tableaux',
+      stock: 12,
+      statut: 'actif',
+      dateCreation: '2025-01-10'
+    },
+    {
+      id: '2',
+      nom: 'Sac Tote "Constellation"',
+      prix: 24.99,
+      image: 'https://images.pexels.com/photos/1152077/pexels-photo-1152077.jpeg?w=400',
+      categorie: 'sacs',
+      stock: 25,
+      statut: 'actif',
+      dateCreation: '2025-01-12'
+    },
+    {
+      id: '3',
+      nom: 'T-shirt "Galaxie Spirale"',
+      prix: 32.99,
+      image: 'https://images.pexels.com/photos/1040427/pexels-photo-1040427.jpeg?w=400',
+      categorie: 'vetements',
+      stock: 0,
+      statut: 'inactif',
+      dateCreation: '2025-01-08'
+    }
+  ])
+
+  const [commandes] = useState<Commande[]>([
+    {
+      id: 'CMD-001',
+      client: 'Marie Dubois',
+      email: 'marie.dubois@email.com',
+      total: 114.98,
+      statut: 'expediee',
+      date: '2025-01-15'
+    },
+    {
+      id: 'CMD-002',
+      client: 'Pierre Martin',
+      email: 'pierre.martin@email.com',
+      total: 89.99,
+      statut: 'traitee',
+      date: '2025-01-16'
+    },
+    {
+      id: 'CMD-003',
+      client: 'Sophie Laurent',
+      email: 'sophie.laurent@email.com',
+      total: 57.98,
+      statut: 'en_attente',
+      date: '2025-01-16'
+    }
+  ])
 
   // Vérifier l'authentification au montage
   useEffect(() => {
@@ -98,6 +158,80 @@ const Admin: React.FC = () => {
       toast.error('Erreur lors de la déconnexion')
     }
   }
+
+  // ✅ CONDITIONS DE RENDU APRÈS TOUS LES HOOKS
+  // État de chargement
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-white">Chargement...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Ne pas afficher le contenu si pas admin
+  if (!isAdmin || !currentUser) {
+    return null
+  }
+
+  // Stats et autres variables
+  const stats = {
+    totalProduits: produits.length,
+    totalCommandes: commandes.length,
+    chiffreAffaires: commandes.reduce((total, cmd) => total + cmd.total, 0),
+    commandesEnAttente: commandes.filter(cmd => cmd.statut === 'en_attente').length
+  }
+
+  const onglets = [
+    { id: 'dashboard', nom: 'Tableau de bord', icone: TrendingUp },
+    { id: 'produits', nom: 'Produits', icone: Package },
+    { id: 'commandes', nom: 'Commandes', icone: ShoppingCart },
+    { id: 'clients', nom: 'Clients', icone: Users },
+    { id: 'configuration', nom: 'Configuration', icone: Settings }
+  ]
+
+  const configTabs = [
+    { id: 'theme' as ConfigTab, label: 'Thème & Couleurs', icon: Palette },
+    { id: 'visual' as ConfigTab, label: 'Effets Visuels', icon: Sparkles },
+    { id: 'content' as ConfigTab, label: 'Contenu', icon: FileText },
+    { id: 'contact' as ConfigTab, label: 'Coordonnées', icon: Mail },
+    { id: 'advanced' as ConfigTab, label: 'Avancé', icon: ImageIcon },
+    { id: 'settings' as ConfigTab, label: 'Paramètres', icon: Settings },
+  ]
+
+  const getStatutCommande = (statut: string) => {
+    const styles = {
+      'en_attente': 'bg-yellow-900/30 text-yellow-300 border-yellow-500/30',
+      'traitee': 'bg-blue-900/30 text-blue-300 border-blue-500/30',
+      'expediee': 'bg-purple-900/30 text-purple-300 border-purple-500/30',
+      'livree': 'bg-green-900/30 text-green-300 border-green-500/30'
+    }
+    
+    const labels = {
+      'en_attente': 'En attente',
+      'traitee': 'Traitée',
+      'expediee': 'Expédiée',
+      'livree': 'Livrée'
+    }
+
+    return { style: styles[statut as keyof typeof styles], label: labels[statut as keyof typeof labels] }
+  }
+
+  // ✅ RENDU PRINCIPAL ICI
+  return (
+    <div className="min-h-screen pt-16">
+      {/* Votre JSX existant... */}
+    </div>
+  )
+}
+
+// Vos composants utilitaires restent identiques
+// ColorInput, TextInput, etc.
+
+export default Admin
 
   // État de chargement
   if (authLoading || loading) {

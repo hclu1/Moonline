@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 
 export interface SiteConfig {
   id?: string
-  user_id?: string // Ajout de user_id
+  user_id?: string
   
   // Couleurs
   primary_color: string
@@ -195,12 +195,12 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
     }
 
     try {
-      // Vérifier si une config existe déjà pour cet utilisateur
+      // ✅ Utiliser maybeSingle() au lieu de single()
       const { data: existingConfig } = await supabase
         .from('site_config')
         .select('*')
         .eq('user_id', currentUser.id)
-        .single()
+        .maybeSingle()
 
       if (existingConfig) {
         set({ config: existingConfig })
@@ -238,7 +238,7 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
       
       const { currentUser } = get()
       
-      // Si pas d'utilisateur authentifié, charger config publique (dernière version)
+      // Si pas d'utilisateur authentifié, charger config publique
       if (!currentUser) {
         const { data: historyData } = await supabase
           .from('site_config_history')
@@ -261,20 +261,18 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
         return
       }
       
-      // Charger la configuration de l'utilisateur admin
+      // ✅ Utiliser maybeSingle() pour éviter l'erreur 406
       const { data, error } = await supabase
         .from('site_config')
         .select('*')
         .eq('user_id', currentUser.id)
-        .single()
+        .maybeSingle()
       
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // Pas de config trouvée, initialiser
-          await get().initializeConfig()
-        } else {
-          throw error
-        }
+      if (error) throw error
+      
+      // Si aucune config n'existe, l'initialiser
+      if (!data) {
+        await get().initializeConfig()
         return
       }
       
@@ -318,7 +316,6 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
   updateConfig: async (updates: Partial<SiteConfig>, description?: string) => {
     const { currentUser, isAdmin, config: currentConfig } = get()
     
-    // Vérifier que l'utilisateur est admin
     if (!currentUser || !isAdmin) {
       console.error('Accès refusé: utilisateur non authentifié ou non admin')
       set({ error: 'Accès refusé' })
@@ -379,14 +376,16 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
     }
 
     try {
+      // ✅ Utiliser maybeSingle()
       const { data, error } = await supabase
         .from('site_config_history')
         .select('config_snapshot')
         .eq('version_number', versionNumber)
         .eq('user_id', currentUser.id)
-        .single()
+        .maybeSingle()
       
       if (error) throw error
+      if (!data) throw new Error('Version introuvable')
       
       const snapshot = data.config_snapshot as SiteConfig
       
@@ -426,7 +425,6 @@ async function saveConfigToHistory(config: SiteConfig, description?: string) {
   }
 
   try {
-    // Obtenir le prochain numéro de version pour cet utilisateur
     const { data: maxVersionData } = await supabase
       .from('site_config_history')
       .select('version_number')
@@ -457,7 +455,6 @@ async function saveConfigToHistory(config: SiteConfig, description?: string) {
 export const useTheme = () => {
   const config = useConfigStore(state => state.config)
   
-  // Appliquer les couleurs au document
   if (config && typeof document !== 'undefined') {
     document.documentElement.style.setProperty('--color-primary', config.primary_color)
     document.documentElement.style.setProperty('--color-secondary', config.secondary_color)
