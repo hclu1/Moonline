@@ -169,26 +169,30 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
   currentUser: null,
 
    // Vérifier l'authentification de l'utilisateur
-  checkAuth: async () => {
+   checkAuth: async () => {
     try {
       console.log('🔐 checkAuth: Début...')
-      const { data: { user }, error } = await supabase.auth.getUser()
       
-      console.log('🔐 checkAuth: Résultat:', { user: user?.email, error })
+      // ✅ D'abord, rafraîchir la session
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('🔐 checkAuth: Session:', !!session)
       
-      if (error || !user) {
-        console.log('❌ checkAuth: Pas d\'utilisateur')
+      if (!session) {
+        console.log('❌ checkAuth: Pas de session')
         set({ isAdmin: false, currentUser: null })
         return
       }
-
+      
+      const user = session.user
       console.log('✅ checkAuth: Utilisateur trouvé:', user.email)
       set({ currentUser: user, isAdmin: true })
+      
     } catch (error) {
       console.error('❌ Erreur vérification auth:', error)
       set({ isAdmin: false, currentUser: null })
     }
   },
+
 
 
   // Initialiser la configuration (créer si n'existe pas)
