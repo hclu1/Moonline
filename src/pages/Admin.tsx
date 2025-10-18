@@ -99,24 +99,39 @@ const Admin: React.FC = () => {
     }
   ])
 
-     // Vérifier l'authentification au montage
+      // Vérifier l'authentification au montage
   useEffect(() => {
     const initAuth = async () => {
+      console.log('🚀 Admin: Début initAuth')
       setAuthLoading(true)
+      
       await checkAuth()
+      
+      // ✅ Attendre que Zustand mette à jour le state
+      await new Promise(resolve => setTimeout(resolve, 200))
       
       // Récupérer le state frais après checkAuth
       const { isAdmin: adminStatus, currentUser: user } = useConfigStore.getState()
       
+      console.log('📊 Admin: State après checkAuth:', {
+        isAdmin: adminStatus,
+        currentUser: user?.email
+      })
+      
       if (adminStatus && user) {
+        console.log('✅ Admin: Chargement config...')
         await loadConfig()
+      } else {
+        console.log('❌ Admin: Pas admin ou pas de user')
       }
       
       setAuthLoading(false)
+      console.log('🏁 Admin: Fin initAuth')
     }
     
     initAuth()
-  }, [checkAuth, loadConfig])
+  }, []) // ✅ TABLEAU VIDE - important !
+
 
   // Rediriger si non authentifié
   useEffect(() => {

@@ -168,22 +168,28 @@ export const useConfigStore = create<ConfigStore>((set, get) => ({
   isAdmin: false,
   currentUser: null,
 
-  // Vérifier l'authentification de l'utilisateur
+   // Vérifier l'authentification de l'utilisateur
   checkAuth: async () => {
     try {
+      console.log('🔐 checkAuth: Début...')
       const { data: { user }, error } = await supabase.auth.getUser()
       
+      console.log('🔐 checkAuth: Résultat:', { user: user?.email, error })
+      
       if (error || !user) {
+        console.log('❌ checkAuth: Pas d\'utilisateur')
         set({ isAdmin: false, currentUser: null })
         return
       }
 
+      console.log('✅ checkAuth: Utilisateur trouvé:', user.email)
       set({ currentUser: user, isAdmin: true })
     } catch (error) {
-      console.error('Erreur vérification auth:', error)
+      console.error('❌ Erreur vérification auth:', error)
       set({ isAdmin: false, currentUser: null })
     }
   },
+
 
   // Initialiser la configuration (créer si n'existe pas)
   initializeConfig: async () => {
