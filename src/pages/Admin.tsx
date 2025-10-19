@@ -32,14 +32,15 @@ const Admin: React.FC = () => {
   const navigate = useNavigate()
   const { config, loadConfig, updateConfig } = useConfigStore()
   
+  // ✅ NOUVEAU : États pour connexion Email/Password
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [pinInput, setPinInput] = useState('')
-  const [pinError, setPinError] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
   
   const [ongletActif, setOngletActif] = useState<'dashboard' | 'produits' | 'commandes' | 'clients' | 'configuration'>('dashboard')
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('theme')
   
-  // ✅ ✅ ✅ CORRECTION MAJEURE : État local pour les modifications en temps réel ✅ ✅ ✅
   const [localConfig, setLocalConfig] = useState<Partial<SiteConfig>>({})
   const [saving, setSaving] = useState(false)
 
@@ -131,29 +132,58 @@ const Admin: React.FC = () => {
     }
   }, [config])
 
-  const handlePinSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const correctPin = '1234'
-    
-    if (pinInput === correctPin) {
+ const handlePinSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  const correctPin = '1234'
+  
+  if (pinInput === correctPin) {
+    try {
+      // ✅ Connexion avec email + mot de passe simple
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: 'hchampag1@hotmail.fr',
+        password: 'TempPassword123!'  // ⬬ Mot de passe temporaire
+      })
+      
+      if (error) {
+        // Si le mot de passe est incorrect, on crée le compte !
+        console.log('⚠️ Mot de passe incorrect, création du compte...')
+        
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: 'hchampag1@hotmail.fr',
+          password: 'TempPassword123!',
+          options: {
+            emailRedirectTo: undefined // Pas de redirection
+          }
+        })
+        
+        if (signUpError) {
+          toast.error('❌ Erreur création compte')
+          return
+        }
+        
+        // Réessayer la connexion
+        await supabase.auth.signInWithPassword({
+          email: 'hchampag1@hotmail.fr',
+          password: 'herve3131'
+        })
+      }
+      
       setIsAuthenticated(true)
       localStorage.setItem('admin_auth', 'true')
-      toast.success('✅ Accès autorisé !')
-      setPinError(false)
-    } else {
-      setPinError(true)
-      toast.error('❌ Code incorrect !')
-      setPinInput('')
+      toast.success('✅ Connecté à Supabase !')
+      await loadConfig()
+      
+    } catch (error) {
+      console.error('❌ Exception:', error)
+      toast.error('❌ Erreur connexion')
     }
+  } else {
+    setPinError(true)
+    toast.error('❌ Code incorrect !')
+    setPinInput('')
   }
-
-  // ✅ ✅ ✅ CORRECTION : Mise à jour immédiate de l'état local ✅ ✅ ✅
- // ✅ SAUVEGARDER CONFIGURATION
- // ✅ Ajouter CETTE fonction juste AVANT handleSaveConfig
-const handleConfigChange = (key: keyof SiteConfig, value: any) => {
-  console.log('📝 Modification:', key, '=', value)
-  setLocalConfig(prev => ({ ...prev, [key]: value }))
 }
+
 
 // Puis votre handleSaveConfig (qui est déjà correct)
 
