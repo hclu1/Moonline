@@ -21,9 +21,7 @@ function App() {
   // Initialiser l'authentification et charger la configuration au démarrage
   useEffect(() => {
     const initializeApp = async () => {
-      // Vérifier l'authentification
       await checkAuth()
-      // Charger la configuration
       await loadConfig()
     }
     
@@ -34,22 +32,18 @@ function App() {
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email)
         
-        // Vérifier l'authentification à chaque changement
         await checkAuth()
         
-        // Recharger la configuration après authentification
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           await loadConfig()
         }
         
-        // Réinitialiser en cas de déconnexion
         if (event === 'SIGNED_OUT') {
           await loadConfig()
         }
       }
     )
     
-    // Nettoyer l'écouteur au démontage du composant
     return () => {
       authListener?.subscription.unsubscribe()
     }
