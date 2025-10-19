@@ -140,14 +140,14 @@ const handleConfigChange = (key: keyof SiteConfig, value: any) => {
 
  const handlePinSubmit = async (e: React.FormEvent) => {
   e.preventDefault()
-  const correctPin = '1234'
+  const correctPin = 'herve3131'
   
   if (pinInput === correctPin) {
     try {
       // ✅ Connexion avec email + mot de passe simple
       const { data, error } = await supabase.auth.signInWithPassword({
         email: 'hchampag1@hotmail.fr',
-        password: 'TempPassword123!'  // ⬬ Mot de passe temporaire
+        password: 'herve3131'  // ⬬ Mot de passe temporaire
       })
       
       if (error) {
@@ -156,7 +156,7 @@ const handleConfigChange = (key: keyof SiteConfig, value: any) => {
         
         const { error: signUpError } = await supabase.auth.signUp({
           email: 'hchampag1@hotmail.fr',
-          password: 'TempPassword123!',
+          password: 'herve1234',
           options: {
             emailRedirectTo: undefined // Pas de redirection
           }
