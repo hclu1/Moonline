@@ -33,10 +33,10 @@ const Admin: React.FC = () => {
   const { config, loadConfig, updateConfig } = useConfigStore()
   
   // ✅ NOUVEAU : États pour connexion Email/Password
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+ // ✅ REMPLACEZ PAR CECI (à partir de la ligne 36)
+const [isAuthenticated, setIsAuthenticated] = useState(false)
+const [pinInput, setPinInput] = useState('')
+const [pinError, setPinError] = useState(false)
   
   const [ongletActif, setOngletActif] = useState<'dashboard' | 'produits' | 'commandes' | 'clients' | 'configuration'>('dashboard')
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('theme')
@@ -131,6 +131,12 @@ const Admin: React.FC = () => {
       setLocalConfig(config)
     }
   }, [config])
+  // ✅ AJOUTEZ CES LIGNES entre ligne 133 et 135
+const handleConfigChange = (key: keyof SiteConfig, value: any) => {
+  console.log('📝 Modification:', key, '=', value)
+  setLocalConfig(prev => ({ ...prev, [key]: value }))
+}
+
 
  const handlePinSubmit = async (e: React.FormEvent) => {
   e.preventDefault()
